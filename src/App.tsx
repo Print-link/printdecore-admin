@@ -1,15 +1,21 @@
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { Toaster } from 'react-hot-toast';
-import { AuthProvider } from './contexts/AuthContext';
-import { ProtectedRoute } from './components/ProtectedRoute';
-import { Login } from './pages/Login';
-import { Dashboard } from './pages/Dashboard';
-import { Managers } from './pages/Managers';
-import { Branches } from './pages/Branches';
-import { Clerks } from './pages/Clerks';
-import { Clients } from './pages/Clients';
-import { Support } from './pages/Support';
+import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { Toaster } from "react-hot-toast";
+import { AuthProvider } from "./contexts/AuthContext";
+import { ProtectedRoute } from "./layout/ProtectedRoute";
+import { Login } from "./pages/Login";
+import { Dashboard } from "./pages/Dashboard";
+import { Managers } from "./pages/Managers";
+import { Branches } from "./pages/Branches";
+import { Clerks } from "./pages/Clerks";
+import { Clients } from "./pages/Clients";
+import { Support } from "./pages/Support";
+import { Orders } from "./pages/Orders";
+import { Billing } from "./pages/Billing";
+import { Reports } from "./pages/Reports";
+import { WhatsApp } from "./pages/WhatsApp";
+import { ActivityLogs } from "./pages/ActivityLogs";
+import { Roles } from "./pages/Roles";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -20,6 +26,21 @@ const queryClient = new QueryClient({
   },
 });
 
+const protectedRoutes = [
+  { path: "/dashboard", element: <Dashboard /> },
+  { path: "/branches", element: <Branches /> },
+  { path: "/managers", element: <Managers /> },
+  { path: "/clerks", element: <Clerks /> },
+  { path: "/clients", element: <Clients /> },
+  { path: "/orders", element: <Orders /> },
+  { path: "/billing", element: <Billing /> },
+  { path: "/reports", element: <Reports /> },
+  { path: "/whatsapp", element: <WhatsApp /> },
+  { path: "/activity-logs", element: <ActivityLogs /> },
+  { path: "/roles", element: <Roles /> },
+  { path: "/support", element: <Support /> },
+];
+
 function App() {
   return (
     <QueryClientProvider client={queryClient}>
@@ -27,54 +48,13 @@ function App() {
         <BrowserRouter>
           <Routes>
             <Route path="/login" element={<Login />} />
-            <Route
-              path="/dashboard"
-              element={
-                <ProtectedRoute>
-                  <Dashboard />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/branches"
-              element={
-                <ProtectedRoute>
-                  <Branches />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/managers"
-              element={
-                <ProtectedRoute>
-                  <Managers />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/clerks"
-              element={
-                <ProtectedRoute>
-                  <Clerks />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/clients"
-              element={
-                <ProtectedRoute>
-                  <Clients />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/support"
-              element={
-                <ProtectedRoute>
-                  <Support />
-                </ProtectedRoute>
-              }
-            />
+            {protectedRoutes.map(({ path, element }) => (
+              <Route
+                key={path}
+                path={path}
+                element={<ProtectedRoute>{element}</ProtectedRoute>}
+              />
+            ))}
             <Route path="/" element={<Navigate to="/dashboard" replace />} />
             <Route path="*" element={<Navigate to="/dashboard" replace />} />
           </Routes>
@@ -82,22 +62,13 @@ function App() {
             position="top-right"
             toastOptions={{
               duration: 3000,
-              style: {
-                background: '#000',
-                color: '#fff',
-                border: '2px solid #000',
-              },
-              success: {
-                style: {
-                  background: '#000',
-                  color: '#fff',
-                },
-              },
+              style: { background: "#111827", color: "#fff", fontSize: "14px" },
+              success: { style: { background: "#111827", color: "#fff" } },
               error: {
                 style: {
-                  background: '#fff',
-                  color: '#000',
-                  border: '2px solid #000',
+                  background: "#fff",
+                  color: "#111827",
+                  border: "1px solid #E5E7EB",
                 },
               },
             }}

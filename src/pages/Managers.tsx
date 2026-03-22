@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useRef } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { managerService } from '../services/superAdminService';
@@ -8,430 +7,208 @@ import { Modal } from '../components/Modal';
 import { Pagination } from '../components/Pagination';
 import toast from 'react-hot-toast';
 import type { Manager } from '../types';
-import '../styles/pages.css';
-import '../styles/table.css';
-import '../styles/forms.css';
-import '../styles/modal.css';
 
 export const Managers = () => {
-    const [page, setPage] = useState(1);
-    const [search, setSearch] = useState('');
-    const [editingManager, setEditingManager] = useState<Manager | null>(null);
-    const [isEditModalOpen, setIsEditModalOpen] = useState(false);
-    const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
-    const [openDropdownId, setOpenDropdownId] = useState<string | null>(null);
-    const dropdownRefs = useRef<{ [key: string]: HTMLDivElement | null }>({});
-    
-    const queryClient = useQueryClient();
-    
-    // Close dropdown when clicking outside
-    useEffect(() => {
-        if (!openDropdownId) return;
-        
-        const handleClickOutside = (event: MouseEvent) => {
-            const target = event.target as Node;
-            let clickedOutside = true;
-            
-            for (const ref of Object.values(dropdownRefs.current)) {
-                if (ref && ref.contains(target)) {
-                    clickedOutside = false;
-                    break;
-                }
-            }
-            
-            if (clickedOutside) {
-                setOpenDropdownId(null);
-            }
-        };
-        
-        document.addEventListener('mousedown', handleClickOutside, true);
-        
-        return () => {
-            document.removeEventListener('mousedown', handleClickOutside, true);
-        };
-    }, [openDropdownId]);
-    
-    const { data, isLoading } = useQuery({
-        queryKey: ['managers', page, search],
-        queryFn: () =>
-        managerService.getAll({
-            page,
-            limit: 10,
-            search: search || undefined,
-        }),
-    });
-    
-    const createMutation = useMutation({
-        mutationFn: (data: any) =>
-        managerService.create(data),
-        onSuccess: () => {
-            queryClient.invalidateQueries({ queryKey: ['managers'] });
-            toast.success('Manager created successfully');
-            setIsCreateModalOpen(false);
-        },
-        onError: (error: any) => {
-            toast.error(error.response?.data?.message || 'Failed to create manager');
-        },
-    });
-    
-    const updateMutation = useMutation({
-        mutationFn: ({ id, data }: { id: string; data: Partial<Manager> }) =>
-        managerService.update(id, data),
-        onSuccess: () => {
-            queryClient.invalidateQueries({ queryKey: ['managers'] });
-            toast.success('Manager updated successfully');
-            setIsEditModalOpen(false);
-            setEditingManager(null);
-        },
-        onError: (error: any) => {
-            toast.error(error.response?.data?.message || 'Failed to update manager');
-        },
-    });
-    
-    const deleteMutation = useMutation({
-        mutationFn: (id: string) => managerService.delete(id),
-        onSuccess: () => {
-            queryClient.invalidateQueries({ queryKey: ['managers'] });
-            toast.success('Manager removed successfully');
-        },
-        onError: (error: any) => {
-            toast.error(error.response?.data?.message || 'Failed to remove manager');
-        },
-    });
-    
-    const handleEdit = (manager: Manager) => {
-        setEditingManager(manager);
-        setIsEditModalOpen(true);
+  const [page, setPage] = useState(1);
+  const [search, setSearch] = useState('');
+  const [editingManager, setEditingManager] = useState<Manager | null>(null);
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+  const [openDropdownId, setOpenDropdownId] = useState<string | null>(null);
+  const dropdownRefs = useRef<{ [key: string]: HTMLDivElement | null }>({});
+  const queryClient = useQueryClient();
+
+  useEffect(() => {
+    if (!openDropdownId) return;
+    const handleClickOutside = (event: MouseEvent) => {
+      const target = event.target as Node;
+      for (const ref of Object.values(dropdownRefs.current)) {
+        if (ref && ref.contains(target)) return;
+      }
+      setOpenDropdownId(null);
     };
-    
-    const handleDelete = (id: string) => {
-        if (window.confirm('Are you sure you want to remove this manager?')) {
-            deleteMutation.mutate(id);
-        }
-    };
-    
-    const handleSubmitCreate = (e: React.FormEvent<HTMLFormElement>) => {
-        e.preventDefault();
-        const formData = new FormData(e.currentTarget);
-        
-        const createData = {
-            firstName: formData.get('firstName') as string,
-            lastName: formData.get('lastName') as string,
-            email: formData.get('email') as string,
-            phoneNumber: formData.get('phoneNumber') as string,
-            password: formData.get('password') as string,
-            role: 'manager',
-        };
-        
-        createMutation.mutate(createData);
-    };
-    
-    const handleSubmitEdit = (e: React.FormEvent<HTMLFormElement>) => {
-        e.preventDefault();
-        if (!editingManager) return;
-        
-        const formData = new FormData(e.currentTarget);
-        const updateData: Partial<Manager> = {
-            firstName: formData.get('firstName') as string,
-            lastName: formData.get('lastName') as string,
-            email: formData.get('email') as string,
-            phoneNumber: formData.get('phoneNumber') as string,
-        };
-        
-        updateMutation.mutate({ id: editingManager.id, data: updateData });
-    };
-    
-    return (
-        <Layout>
-        <div className="page-container">
-        <div className="page-header">
-        <div>
-        <h1 className="page-title">Managers Management</h1>
+    document.addEventListener('mousedown', handleClickOutside, true);
+    return () => document.removeEventListener('mousedown', handleClickOutside, true);
+  }, [openDropdownId]);
+
+  const { data, isLoading } = useQuery({
+    queryKey: ['managers', page, search],
+    queryFn: () => managerService.getAll({ page, limit: 10, search: search || undefined }),
+  });
+
+  const createMutation = useMutation({
+    mutationFn: (data: any) => managerService.create(data),
+    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['managers'] }); toast.success('Manager created'); setIsCreateModalOpen(false); },
+    onError: (error: any) => { toast.error(error.response?.data?.message || 'Failed to create manager'); },
+  });
+
+  const updateMutation = useMutation({
+    mutationFn: ({ id, data }: { id: string; data: Partial<Manager> }) => managerService.update(id, data),
+    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['managers'] }); toast.success('Manager updated'); setIsEditModalOpen(false); setEditingManager(null); },
+    onError: (error: any) => { toast.error(error.response?.data?.message || 'Failed to update manager'); },
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: (id: string) => managerService.delete(id),
+    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['managers'] }); toast.success('Manager removed'); },
+    onError: (error: any) => { toast.error(error.response?.data?.message || 'Failed to remove manager'); },
+  });
+
+  const handleSubmitCreate = (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    const fd = new FormData(e.currentTarget);
+    createMutation.mutate({
+      firstName: fd.get('firstName'), lastName: fd.get('lastName'),
+      email: fd.get('email'), phoneNumber: fd.get('phoneNumber'),
+      password: fd.get('password'), role: 'manager',
+    });
+  };
+
+  const handleSubmitEdit = (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    if (!editingManager) return;
+    const fd = new FormData(e.currentTarget);
+    updateMutation.mutate({
+      id: editingManager.id,
+      data: { firstName: fd.get('firstName') as string, lastName: fd.get('lastName') as string, email: fd.get('email') as string, phoneNumber: fd.get('phoneNumber') as string },
+    });
+  };
+
+  return (
+    <Layout>
+      <div>
+        <div className="flex items-center justify-between mb-6">
+          <h1 className="text-2xl font-bold text-gray-900">Managers</h1>
+          <button onClick={() => setIsCreateModalOpen(true)} className="px-4 py-2 bg-gray-900 text-white text-sm font-medium rounded-lg hover:bg-gray-800">
+            Register Manager
+          </button>
         </div>
-        <button
-        onClick={() => setIsCreateModalOpen(true)}
-        className="btn btn-primary"
-        >
-        Register Manager
-        </button>
+
+        <div className="mb-4">
+          <input
+            type="text" placeholder="Search managers..." value={search}
+            onChange={(e) => { setSearch(e.target.value); setPage(1); }}
+            className="w-full max-w-sm px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-gray-900 focus:border-transparent"
+          />
         </div>
-        
-        <div className="filters">
-        <input
-        type="text"
-        placeholder="Search managers..."
-        value={search}
-        onChange={(e) => {
-            setSearch(e.target.value);
-            setPage(1);
-        }}
-        className="filter-input"
-        />
-        </div>
-        
+
         {isLoading ? (
-            <div className="loading-container">
-            <LoadingSpinner />
-            </div>
+          <div className="flex justify-center py-16"><LoadingSpinner /></div>
         ) : (
-            <>
-            <div className="table-container">
-            <table className="table">
-            <thead className="table-header">
-            <tr>
-            <th>Name</th>
-            <th>Email</th>
-            <th>Phone</th>
-            <th>Role</th>
-            <th>Actions</th>
-            </tr>
-            </thead>
-            <tbody className="table-body">
-            {data?.managers.map((manager) => (
-                <tr key={manager.id} className="table-row">
-                <td className="table-cell">
-                <div style={{display:'flex', alignItems:'center', gap:'10px'}}>
-                {manager.avatar && <img src={manager.avatar} alt="" style={{width: 30, height: 30, borderRadius: '50%', objectFit:'cover'}} />}
-                {manager.firstName} {manager.lastName}
-                </div>
-                </td>
-                <td className="table-cell">{manager.email}</td>
-                <td className="table-cell">{manager.phoneNumber || '-'}</td>
-                <td className="table-cell">
-                <span className="status-badge active">
-                {manager.role}
-                </span>
-                </td>
-                <td className="table-cell">
-                <div 
-                className="dropdown-container"
-                ref={(el) => {
-                    dropdownRefs.current[manager.id] = el;
-                }}
-                >
-                <button
-                onClick={(e) => {
-                    e.stopPropagation();
-                    setOpenDropdownId(openDropdownId === manager.id ? null : manager.id);
-                }}
-                className="dropdown-trigger"
-                aria-label="Actions"
-                type="button"
-                >
-                <span className="dropdown-dots">⋯</span>
-                </button>
-                {openDropdownId === manager.id && (
-                    <div 
-                    className="dropdown-menu"
-                    onMouseDown={(e) => e.stopPropagation()}
-                    onClick={(e) => e.stopPropagation()}
-                    >
-                    <button
-                    onMouseDown={(e) => e.stopPropagation()}
-                    onClick={(e) => {
-                        e.stopPropagation();
-                        handleEdit(manager);
-                        setOpenDropdownId(null);
-                    }}
-                    className="dropdown-item"
-                    type="button"
-                    >
-                    Edit
-                    </button>
-                    <button
-                    onMouseDown={(e) => e.stopPropagation()}
-                    onClick={(e) => {
-                        e.stopPropagation();
-                        handleDelete(manager.id);
-                        setOpenDropdownId(null);
-                    }}
-                    className="dropdown-item dropdown-item-danger"
-                    type="button"
-                    >
-                    Remove
-                    </button>
-                    </div>
-                )}
-                </div>
-                </td>
-                </tr>
-            ))}
-            </tbody>
-            </table>
+          <>
+            <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
+              <table className="w-full text-sm">
+                <thead className="bg-gray-50 border-b border-gray-200">
+                  <tr>
+                    <th className="text-left px-4 py-3 font-medium text-gray-500">Name</th>
+                    <th className="text-left px-4 py-3 font-medium text-gray-500">Email</th>
+                    <th className="text-left px-4 py-3 font-medium text-gray-500">Phone</th>
+                    <th className="text-left px-4 py-3 font-medium text-gray-500">Role</th>
+                    <th className="text-right px-4 py-3 font-medium text-gray-500">Actions</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-100">
+                  {data?.managers.map((manager) => (
+                    <tr key={manager.id} className="hover:bg-gray-50">
+                      <td className="px-4 py-3">
+                        <div className="flex items-center gap-2">
+                          {manager.avatar && <img src={manager.avatar} alt="" className="w-7 h-7 rounded-full object-cover" />}
+                          <span className="font-medium text-gray-900">{manager.firstName} {manager.lastName}</span>
+                        </div>
+                      </td>
+                      <td className="px-4 py-3 text-gray-600">{manager.email}</td>
+                      <td className="px-4 py-3 text-gray-600">{manager.phoneNumber || '-'}</td>
+                      <td className="px-4 py-3">
+                        <span className="inline-flex px-2 py-0.5 text-xs font-medium bg-gray-100 text-gray-700 rounded-full">{manager.role}</span>
+                      </td>
+                      <td className="px-4 py-3 text-right">
+                        <div className="relative inline-block" ref={(el) => { dropdownRefs.current[manager.id] = el; }}>
+                          <button onClick={() => setOpenDropdownId(openDropdownId === manager.id ? null : manager.id)} className="p-1 text-gray-400 hover:text-gray-600" type="button">
+                            <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20"><path d="M10 6a2 2 0 110-4 2 2 0 010 4zM10 12a2 2 0 110-4 2 2 0 010 4zM10 18a2 2 0 110-4 2 2 0 010 4z" /></svg>
+                          </button>
+                          {openDropdownId === manager.id && (
+                            <div className="absolute right-0 mt-1 w-36 bg-white rounded-lg shadow-lg border border-gray-200 py-1 z-10">
+                              <button onClick={() => { setEditingManager(manager); setIsEditModalOpen(true); setOpenDropdownId(null); }} className="w-full text-left px-3 py-1.5 text-sm text-gray-700 hover:bg-gray-50">Edit</button>
+                              <button onClick={() => { if (window.confirm('Remove this manager?')) deleteMutation.mutate(manager.id); setOpenDropdownId(null); }} className="w-full text-left px-3 py-1.5 text-sm text-red-600 hover:bg-red-50">Remove</button>
+                            </div>
+                          )}
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
             </div>
-            
-            {data?.pagination && (
-                <Pagination
-                currentPage={data.pagination.currentPage}
-                totalPages={data.pagination.totalPages}
-                totalItems={data.pagination.totalItems}
-                itemsPerPage={data.pagination.itemsPerPage}
-                onPageChange={setPage}
-                />
-            )}
-            </>
+            {data?.pagination && <Pagination {...data.pagination} onPageChange={setPage} />}
+          </>
         )}
-        
+
         {/* Create Modal */}
-        <Modal
-        isOpen={isCreateModalOpen}
-        onClose={() => setIsCreateModalOpen(false)}
-        title="Register New Manager"
-        >
-        <form onSubmit={handleSubmitCreate} className="form-container">
-        <div className="form-group-row" style={{display:'flex', gap:'1rem'}}>
-        <div className="form-group" style={{flex:1}}>
-        <label className="form-label">First Name</label>
-        <input
-        type="text"
-        name="firstName"
-        required
-        className="form-input"
-        placeholder="First Name"
-        />
-        </div>
-        <div className="form-group" style={{flex:1}}>
-        <label className="form-label">Last Name</label>
-        <input
-        type="text"
-        name="lastName"
-        required
-        className="form-input"
-        placeholder="Last Name"
-        />
-        </div>
-        </div>
-        
-        <div className="form-group">
-        <label className="form-label">Email</label>
-        <input
-        type="email"
-        name="email"
-        required
-        className="form-input"
-        placeholder="manager@example.com"
-        />
-        </div>
-        
-        <div className="form-group">
-        <label className="form-label">Phone Number</label>
-        <input
-        type="text"
-        name="phoneNumber"
-        className="form-input"
-        placeholder="Optional"
-        />
-        </div>
-        
-        <div className="form-group">
-        <label className="form-label">Password</label>
-        <input
-        type="password"
-        name="password"
-        required
-        minLength={6}
-        className="form-input"
-        placeholder="******"
-        />
-        </div>
-        
-        <div className="form-actions">
-        <button
-        type="submit"
-        disabled={createMutation.isPending}
-        className="btn btn-primary"
-        >
-        {createMutation.isPending ? 'Creating...' : 'Register Manager'}
-        </button>
-        <button
-        type="button"
-        onClick={() => setIsCreateModalOpen(false)}
-        className="btn btn-secondary"
-        >
-        Cancel
-        </button>
-        </div>
-        </form>
+        <Modal isOpen={isCreateModalOpen} onClose={() => setIsCreateModalOpen(false)} title="Register New Manager">
+          <form onSubmit={handleSubmitCreate} className="space-y-4">
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">First Name</label>
+                <input type="text" name="firstName" required className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-gray-900" placeholder="First Name" />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Last Name</label>
+                <input type="text" name="lastName" required className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-gray-900" placeholder="Last Name" />
+              </div>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
+              <input type="email" name="email" required className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-gray-900" placeholder="manager@example.com" />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Phone Number</label>
+              <input type="text" name="phoneNumber" className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-gray-900" placeholder="Optional" />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Password</label>
+              <input type="password" name="password" required minLength={6} className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-gray-900" placeholder="••••••" />
+            </div>
+            <div className="flex justify-end gap-3 pt-2">
+              <button type="button" onClick={() => setIsCreateModalOpen(false)} className="px-4 py-2 text-sm font-medium text-gray-700 border border-gray-300 rounded-lg hover:bg-gray-50">Cancel</button>
+              <button type="submit" disabled={createMutation.isPending} className="px-4 py-2 text-sm font-medium text-white bg-gray-900 rounded-lg hover:bg-gray-800 disabled:opacity-50">
+                {createMutation.isPending ? 'Creating...' : 'Register Manager'}
+              </button>
+            </div>
+          </form>
         </Modal>
-        
+
         {/* Edit Modal */}
-        <Modal
-        isOpen={isEditModalOpen}
-        onClose={() => {
-            setIsEditModalOpen(false);
-            setEditingManager(null);
-        }}
-        title="Edit Manager"
-        >
-        {editingManager && (
-            <form onSubmit={handleSubmitEdit} className="form-container">
-            <div className="form-group-row" style={{display:'flex', gap:'1rem'}}>
-            <div className="form-group" style={{flex:1}}>
-            <label className="form-label">First Name</label>
-            <input
-            type="text"
-            name="firstName"
-            defaultValue={editingManager.firstName}
-            required
-            className="form-input"
-            />
-            </div>
-            <div className="form-group" style={{flex:1}}>
-            <label className="form-label">Last Name</label>
-            <input
-            type="text"
-            name="lastName"
-            defaultValue={editingManager.lastName}
-            required
-            className="form-input"
-            />
-            </div>
-            </div>
-            
-            <div className="form-group">
-            <label className="form-label">Email</label>
-            <input
-            type="email"
-            name="email"
-            defaultValue={editingManager.email}
-            required
-            className="form-input"
-            />
-            </div>
-            
-            <div className="form-group">
-            <label className="form-label">Phone Number</label>
-            <input
-            type="text"
-            name="phoneNumber"
-            defaultValue={editingManager.phoneNumber}
-            className="form-input"
-            />
-            </div>
-            
-            <div className="form-actions">
-            <button
-            type="submit"
-            disabled={updateMutation.isPending}
-            className="btn btn-primary"
-            >
-            {updateMutation.isPending ? 'Saving...' : 'Save Changes'}
-            </button>
-            <button
-            type="button"
-            onClick={() => {
-                setIsEditModalOpen(false);
-                setEditingManager(null);
-            }}
-            className="btn btn-secondary"
-            >
-            Cancel
-            </button>
-            </div>
+        <Modal isOpen={isEditModalOpen} onClose={() => { setIsEditModalOpen(false); setEditingManager(null); }} title="Edit Manager">
+          {editingManager && (
+            <form onSubmit={handleSubmitEdit} className="space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">First Name</label>
+                  <input type="text" name="firstName" defaultValue={editingManager.firstName} required className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-gray-900" />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Last Name</label>
+                  <input type="text" name="lastName" defaultValue={editingManager.lastName} required className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-gray-900" />
+                </div>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
+                <input type="email" name="email" defaultValue={editingManager.email} required className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-gray-900" />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Phone Number</label>
+                <input type="text" name="phoneNumber" defaultValue={editingManager.phoneNumber} className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-gray-900" />
+              </div>
+              <div className="flex justify-end gap-3 pt-2">
+                <button type="button" onClick={() => { setIsEditModalOpen(false); setEditingManager(null); }} className="px-4 py-2 text-sm font-medium text-gray-700 border border-gray-300 rounded-lg hover:bg-gray-50">Cancel</button>
+                <button type="submit" disabled={updateMutation.isPending} className="px-4 py-2 text-sm font-medium text-white bg-gray-900 rounded-lg hover:bg-gray-800 disabled:opacity-50">
+                  {updateMutation.isPending ? 'Saving...' : 'Save Changes'}
+                </button>
+              </div>
             </form>
-        )}
+          )}
         </Modal>
-        </div>
-        </Layout>
-    );
+      </div>
+    </Layout>
+  );
 };

@@ -66,29 +66,11 @@ export interface SupportTicket {
 }
 
 export interface DashboardStats {
-  users: {
-    total: number;
-    active: number;
-    inactive: number;
-  };
-  clerks: {
-    total: number;
-    active: number;
-    inactive: number;
-  };
-  clients: {
-    total: number;
-    active: number;
-    inactive: number;
-  };
-  supportTickets: {
-    total: number;
-  };
-  printJobs: {
-    total: number;
-    pending: number;
-    completed: number;
-  };
+  users: { total: number; active: number; inactive: number };
+  clerks: { total: number; active: number; inactive: number };
+  clients: { total: number; active: number; inactive: number };
+  supportTickets: { total: number };
+  printJobs: { total: number; pending: number; completed: number };
 }
 
 export interface PaginatedResponse<T> {
@@ -101,11 +83,10 @@ export interface PaginatedResponse<T> {
   };
 }
 
-
 export interface Branch {
   id: string;
   name: string;
-  manager_id: string; // ID of the manager
+  manager_id: string;
   phoneNumber: string;
   branchEmailAddress: string;
   branchCoverImage?: string;
@@ -119,17 +100,167 @@ export interface Branch {
   createdAt?: string;
   updatedAt?: string;
   payStackSubAccountId?: string;
-  distance?: number; // Optional if we ever reuse for nearMe, but primarily for admin list it might not be there or needed
+  distance?: number;
 }
 
 export interface Manager {
-    id: string;
-    firstName: string;
-    lastName: string;
-    email: string;
-    phoneNumber?: string;
-    avatar?: string;
-    role: "manager";
-    createdAt: string; // Frontend usually gets string dates from JSON
-    updatedAt: string;
+  id: string;
+  firstName: string;
+  lastName: string;
+  email: string;
+  phoneNumber?: string;
+  avatar?: string;
+  role: "manager";
+  createdAt: string;
+  updatedAt: string;
+}
+
+// --- New types for backend features ---
+
+export interface Plan {
+  id: string;
+  name: string;
+  slug: string;
+  description?: string;
+  monthlyPrice: number;
+  yearlyPrice: number;
+  previousMonthlyPrice?: number;
+  previousYearlyPrice?: number;
+  currency: string;
+  maxBranches: number;
+  maxClerks: number;
+  maxOrdersPerMonth: number;
+  maxServices: number;
+  maxBroadcastsPerMonth: number;
+  hasWhatsapp: boolean;
+  hasWhatsappBroadcast: boolean;
+  hasWhatsappLabels: boolean;
+  hasAnalytics: boolean;
+  hasCrm: boolean;
+  hasCustomRoles: boolean;
+  commissionPercent: number;
+  paystackMonthlyPlanCode?: string;
+  paystackYearlyPlanCode?: string;
+  isActive: boolean;
+  sortOrder: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface Subscription {
+  id: string;
+  managerId: string;
+  planId: string;
+  plan?: Plan;
+  status: 'active' | 'cancelled' | 'expired' | 'past_due';
+  billingCycle: 'monthly' | 'yearly';
+  currentPeriodStart: string;
+  currentPeriodEnd: string;
+  paystackSubscriptionCode?: string;
+  paystackCustomerCode?: string;
+  cancelledAt?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export type OrderStatus = 'PENDING' | 'QUOTED' | 'PAID' | 'RECEIVED' | 'IN_PROGRESS' | 'COMPLETED';
+
+export interface Order {
+  id: string;
+  customerId: string;
+  customerName?: string;
+  customerEmail?: string;
+  customerPhone?: string;
+  branchId: string;
+  branchName?: string;
+  managerId: string;
+  status: OrderStatus;
+  totalPrice: number;
+  currency?: string;
+  paymentReference?: string;
+  commissionAmount?: number;
+  notes?: string;
+  items?: OrderItem[];
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface OrderItem {
+  id: string;
+  orderId: string;
+  serviceName: string;
+  quantity: number;
+  unitPrice: number;
+  totalPrice: number;
+  specifications?: Record<string, unknown>;
+  createdAt: string;
+}
+
+export interface ActivityLog {
+  id: string;
+  userId: string;
+  userRole: string;
+  userName?: string;
+  action: string;
+  entityType: string;
+  entityId?: string;
+  details?: Record<string, unknown>;
+  ipAddress?: string;
+  createdAt: string;
+}
+
+export interface Role {
+  id: string;
+  name: string;
+  description?: string;
+  managerId: string;
+  permissions: string[];
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface Permission {
+  id: string;
+  name: string;
+  description?: string;
+  category: string;
+}
+
+export interface WhatsAppConnection {
+  managerId: string;
+  branchId: string;
+  branchName?: string;
+  status: 'connected' | 'disconnected' | 'connecting';
+  phoneNumber?: string;
+  lastSeen?: string;
+}
+
+export interface WhatsAppBroadcast {
+  id: string;
+  managerId: string;
+  branchId: string;
+  name: string;
+  message: string;
+  mediaUrl?: string;
+  targetType: 'all' | 'label' | 'manual';
+  targetLabelId?: string;
+  recipientCount: number;
+  sentCount: number;
+  failedCount: number;
+  status: 'draft' | 'scheduled' | 'sending' | 'completed' | 'failed';
+  scheduledAt?: string;
+  completedAt?: string;
+  createdAt: string;
+}
+
+export interface RevenueReport {
+  totalRevenue: number;
+  paidRevenue: number;
+  pendingRevenue: number;
+  completedRevenue: number;
+  orderCount: number;
+  averageOrderValue: number;
+  dailyTrends: { date: string; revenue: number; orders: number }[];
+  categoryPerformance: { category: string; revenue: number; orders: number; items: number }[];
+  topServices: { name: string; revenue: number; orders: number }[];
 }

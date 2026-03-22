@@ -7,10 +7,6 @@ import { Modal } from '../components/Modal';
 import { Pagination } from '../components/Pagination';
 import toast from 'react-hot-toast';
 import type { SupportTicket } from '../types';
-import '../styles/pages.css';
-import '../styles/table.css';
-import '../styles/forms.css';
-import '../styles/modal.css';
 
 export const Support = () => {
   const [page, setPage] = useState(1);
@@ -18,178 +14,52 @@ export const Support = () => {
   const [selectedTicket, setSelectedTicket] = useState<SupportTicket | null>(null);
   const [isViewModalOpen, setIsViewModalOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
-  const [isAdminModalOpen, setIsAdminModalOpen] = useState(false);
-  const [isClientModalOpen, setIsClientModalOpen] = useState(false);
   const [responseText, setResponseText] = useState('');
   const [openDropdownId, setOpenDropdownId] = useState<string | null>(null);
   const dropdownRefs = useRef<{ [key: string]: HTMLDivElement | null }>({});
-
   const queryClient = useQueryClient();
 
-  // Close dropdown when clicking outside
   useEffect(() => {
     if (!openDropdownId) return;
-
     const handleClickOutside = (event: MouseEvent) => {
       const target = event.target as Node;
-      let clickedOutside = true;
-      
       for (const ref of Object.values(dropdownRefs.current)) {
-        if (ref && ref.contains(target)) {
-          clickedOutside = false;
-          break;
-        }
+        if (ref && ref.contains(target)) return;
       }
-      
-      if (clickedOutside) {
-        setOpenDropdownId(null);
-      }
+      setOpenDropdownId(null);
     };
-
-    // Use capture phase to catch events before they bubble
     document.addEventListener('mousedown', handleClickOutside, true);
-
-    return () => {
-      document.removeEventListener('mousedown', handleClickOutside, true);
-    };
+    return () => document.removeEventListener('mousedown', handleClickOutside, true);
   }, [openDropdownId]);
 
   const { data, isLoading } = useQuery({
     queryKey: ['supportTickets', page, statusFilter],
-    queryFn: () =>
-      supportService.getAll({
-        page,
-        limit: 10,
-        status: statusFilter || undefined,
-      }),
+    queryFn: () => supportService.getAll({ page, limit: 10, status: statusFilter || undefined }),
   });
 
   const updateMutation = useMutation({
-    mutationFn: ({ id, data }: { id: string; data: { message?: string; response?: string } }) =>
-      supportService.update(id, data),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['supportTickets'] });
-      toast.success('Support ticket updated successfully');
-      setIsEditModalOpen(false);
-      setSelectedTicket(null);
-      setResponseText('');
-    },
-    onError: (error: unknown) => {
-      const err = error as { response?: { data?: { message?: string } } };
-      toast.error(err.response?.data?.message || 'Failed to update ticket');
-    },
+    mutationFn: ({ id, data }: { id: string; data: { response?: string } }) => supportService.update(id, data),
+    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['supportTickets'] }); toast.success('Ticket updated'); setIsEditModalOpen(false); setSelectedTicket(null); setResponseText(''); },
+    onError: (error: any) => { toast.error(error.response?.data?.message || 'Failed to update ticket'); },
   });
 
   const deleteMutation = useMutation({
     mutationFn: (id: string) => supportService.delete(id),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['supportTickets'] });
-      toast.success('Support ticket deleted successfully');
-    },
-    onError: (error: unknown) => {
-      const err = error as { response?: { data?: { message?: string } } };
-      toast.error(err.response?.data?.message || 'Failed to delete ticket');
-    },
+    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['supportTickets'] }); toast.success('Ticket deleted'); },
+    onError: (error: any) => { toast.error(error.response?.data?.message || 'Failed to delete ticket'); },
   });
 
-  const handleView = (ticket: SupportTicket) => {
-    setSelectedTicket(ticket);
-    setIsViewModalOpen(true);
-  };
-
-  const handleEdit = (ticket: SupportTicket) => {
-    setSelectedTicket(ticket);
-    setResponseText(ticket.response || '');
-    setIsEditModalOpen(true);
-  };
-
-  const handleDelete = (id: string) => {
-    if (window.confirm('Are you sure you want to delete this support ticket?')) {
-      deleteMutation.mutate(id);
-    }
-  };
-
-  const handleViewAdmin = (ticket: SupportTicket) => {
-    setSelectedTicket(ticket);
-    setIsAdminModalOpen(true);
-  };
-
-  const handleViewClient = (ticket: SupportTicket) => {
-    setSelectedTicket(ticket);
-    setIsClientModalOpen(true);
-  };
-
-  const handleSubmitResponse = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!selectedTicket) return;
-
-    updateMutation.mutate({
-      id: selectedTicket._id,
-      data: { response: responseText },
-    });
-  };
-
-  const getClientName = (ticket: SupportTicket) => {
-    if (typeof ticket.clientId === 'object' && ticket.clientId) {
-      return ticket.clientId.fullName;
-    }
-    return 'Unknown';
-  };
-
-  const getAdminName = (ticket: SupportTicket) => {
-    if (typeof ticket.adminId === 'object' && ticket.adminId) {
-      return ticket.adminId.name || ticket.adminId.email;
-    }
-    return 'Unknown';
-  };
-
-  const getClientPhone = (ticket: SupportTicket) => {
-    if (typeof ticket.clientId === 'object' && ticket.clientId) {
-      return ticket.clientId.phoneNumber || '-';
-    }
-    return '-';
-  };
-
-  const getJobStatus = (ticket: SupportTicket) => {
-    if (ticket.jobId && typeof ticket.jobId === 'object') {
-      return ticket.jobId.status || '-';
-    }
-    return '-';
-  };
-
-  const getPrinterName = (ticket: SupportTicket) => {
-    if (ticket.jobId && typeof ticket.jobId === 'object') {
-      return ticket.jobId.printerName || '-';
-    }
-    return '-';
-  };
-
-  const getJobId = (ticket: SupportTicket) => {
-    if (ticket.jobId && typeof ticket.jobId === 'object') {
-      return ticket.jobId._id || '-';
-    }
-    return '-';
-  };
+  const getClientName = (ticket: SupportTicket) => typeof ticket.clientId === 'object' && ticket.clientId ? ticket.clientId.fullName : 'Unknown';
+  const getAdminName = (ticket: SupportTicket) => typeof ticket.adminId === 'object' && ticket.adminId ? (ticket.adminId.name || ticket.adminId.email) : 'Unknown';
 
   return (
     <Layout>
-      <div className="page-container">
-        <div className="page-header">
-          <div>
-            <h3 className="page-title">Support Tickets</h3>
-            {/* <p className="page-subtitle">Manage all support tickets</p> */}
-          </div>
-        </div>
+      <div>
+        <h1 className="text-2xl font-bold text-gray-900 mb-6">Support Tickets</h1>
 
-        <div className="filters">
-          <select
-            value={statusFilter}
-            onChange={(e) => {
-              setStatusFilter(e.target.value);
-              setPage(1);
-            }}
-            className="filter-select"
-          >
+        <div className="mb-4">
+          <select value={statusFilter} onChange={(e) => { setStatusFilter(e.target.value); setPage(1); }}
+            className="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-gray-900">
             <option value="">All Status</option>
             <option value="open">Open</option>
             <option value="closed">Closed</option>
@@ -198,123 +68,43 @@ export const Support = () => {
         </div>
 
         {isLoading ? (
-          <div className="loading-container">
-            <LoadingSpinner />
-          </div>
+          <div className="flex justify-center py-16"><LoadingSpinner /></div>
         ) : (
           <>
-            <div className="table-container">
-              <table className="table">
-                <thead className="table-header">
+            <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
+              <table className="w-full text-sm">
+                <thead className="bg-gray-50 border-b border-gray-200">
                   <tr>
-                    <th>Client</th>
-                    <th>Admin</th>
-                    <th>Message</th>
-                    <th>Status</th>
-                    <th>Created</th>
-                    <th>Actions</th>
+                    <th className="text-left px-4 py-3 font-medium text-gray-500">Client</th>
+                    <th className="text-left px-4 py-3 font-medium text-gray-500">Admin</th>
+                    <th className="text-left px-4 py-3 font-medium text-gray-500">Message</th>
+                    <th className="text-left px-4 py-3 font-medium text-gray-500">Status</th>
+                    <th className="text-left px-4 py-3 font-medium text-gray-500">Created</th>
+                    <th className="text-right px-4 py-3 font-medium text-gray-500">Actions</th>
                   </tr>
                 </thead>
-                <tbody className="table-body">
-                  {data?.supportTickets.map((ticket, index) => (
-                    <tr key={ticket._id} className="table-row">
-                      <td className="table-cell">{getClientName(ticket)}</td>
-                      <td className="table-cell">{getAdminName(ticket)}</td>
-                      <td className="table-cell" style={{ maxWidth: '300px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                        {ticket.message}
-                      </td>
-                      <td className="table-cell">
-                        <span className="status-badge active">
+                <tbody className="divide-y divide-gray-100">
+                  {data?.supportTickets.map((ticket) => (
+                    <tr key={ticket._id} className="hover:bg-gray-50">
+                      <td className="px-4 py-3 font-medium text-gray-900">{getClientName(ticket)}</td>
+                      <td className="px-4 py-3 text-gray-600">{getAdminName(ticket)}</td>
+                      <td className="px-4 py-3 text-gray-600 max-w-[250px] truncate">{ticket.message}</td>
+                      <td className="px-4 py-3">
+                        <span className={`inline-flex px-2 py-0.5 text-xs font-medium rounded-full ${ticket.status === 'open' ? 'bg-blue-100 text-blue-700' : ticket.status === 'closed' ? 'bg-gray-100 text-gray-600' : 'bg-yellow-100 text-yellow-700'}`}>
                           {ticket.status || 'Open'}
                         </span>
                       </td>
-                      <td className="table-cell">
-                        {new Date(ticket.createdAt).toLocaleDateString()}
-                      </td>
-                      <td className="table-cell">
-                        <div 
-                          className="dropdown-container"
-                          ref={(el) => {
-                            dropdownRefs.current[ticket._id] = el;
-                          }}
-                        >
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              setOpenDropdownId(openDropdownId === ticket._id ? null : ticket._id);
-                            }}
-                            className="dropdown-trigger"
-                            aria-label="Actions"
-                            type="button"
-                          >
-                            <span className="dropdown-dots">⋯</span>
+                      <td className="px-4 py-3 text-gray-500">{new Date(ticket.createdAt).toLocaleDateString()}</td>
+                      <td className="px-4 py-3 text-right">
+                        <div className="relative inline-block" ref={(el) => { dropdownRefs.current[ticket._id] = el; }}>
+                          <button onClick={() => setOpenDropdownId(openDropdownId === ticket._id ? null : ticket._id)} className="p-1 text-gray-400 hover:text-gray-600" type="button">
+                            <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20"><path d="M10 6a2 2 0 110-4 2 2 0 010 4zM10 12a2 2 0 110-4 2 2 0 010 4zM10 18a2 2 0 110-4 2 2 0 010 4z" /></svg>
                           </button>
                           {openDropdownId === ticket._id && (
-                            <div 
-                              className="dropdown-menu"
-                              onMouseDown={(e) => e.stopPropagation()}
-                              onClick={(e) => e.stopPropagation()}
-                            >
-                              <button
-                                onMouseDown={(e) => e.stopPropagation()}
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  handleView(ticket);
-                                  setOpenDropdownId(null);
-                                }}
-                                className="dropdown-item"
-                                type="button"
-                              >
-                                View Ticket
-                              </button>
-                              <button
-                                onMouseDown={(e) => e.stopPropagation()}
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  handleViewClient(ticket);
-                                  setOpenDropdownId(null);
-                                }}
-                                className="dropdown-item"
-                                type="button"
-                              >
-                                View Client Details
-                              </button>
-                              <button
-                                onMouseDown={(e) => e.stopPropagation()}
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  handleViewAdmin(ticket);
-                                  setOpenDropdownId(null);
-                                }}
-                                className="dropdown-item"
-                                type="button"
-                              >
-                                View Admin Details
-                              </button>
-                              <button
-                                onMouseDown={(e) => e.stopPropagation()}
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  handleEdit(ticket);
-                                  setOpenDropdownId(null);
-                                }}
-                                className="dropdown-item"
-                                type="button"
-                              >
-                                Respond
-                              </button>
-                              <button
-                                onMouseDown={(e) => e.stopPropagation()}
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  handleDelete(ticket._id);
-                                  setOpenDropdownId(null);
-                                }}
-                                className="dropdown-item dropdown-item-danger"
-                                type="button"
-                              >
-                                Delete
-                              </button>
+                            <div className="absolute right-0 mt-1 w-40 bg-white rounded-lg shadow-lg border border-gray-200 py-1 z-10">
+                              <button onClick={() => { setSelectedTicket(ticket); setIsViewModalOpen(true); setOpenDropdownId(null); }} className="w-full text-left px-3 py-1.5 text-sm text-gray-700 hover:bg-gray-50">View Details</button>
+                              <button onClick={() => { setSelectedTicket(ticket); setResponseText(ticket.response || ''); setIsEditModalOpen(true); setOpenDropdownId(null); }} className="w-full text-left px-3 py-1.5 text-sm text-gray-700 hover:bg-gray-50">Respond</button>
+                              <button onClick={() => { if (window.confirm('Delete this ticket?')) deleteMutation.mutate(ticket._id); setOpenDropdownId(null); }} className="w-full text-left px-3 py-1.5 text-sm text-red-600 hover:bg-red-50">Delete</button>
                             </div>
                           )}
                         </div>
@@ -324,331 +114,65 @@ export const Support = () => {
                 </tbody>
               </table>
             </div>
-
-            {data?.pagination && (
-              <Pagination
-                currentPage={data.pagination.currentPage}
-                totalPages={data.pagination.totalPages}
-                totalItems={data.pagination.totalItems}
-                itemsPerPage={data.pagination.itemsPerPage}
-                onPageChange={setPage}
-              />
-            )}
+            {data?.pagination && <Pagination {...data.pagination} onPageChange={setPage} />}
           </>
         )}
 
-        <Modal
-          isOpen={isViewModalOpen}
-          onClose={() => {
-            setIsViewModalOpen(false);
-            setSelectedTicket(null);
-          }}
-          title="Support Ticket Details"
-          size="large"
-        >
+        {/* View Modal */}
+        <Modal isOpen={isViewModalOpen} onClose={() => { setIsViewModalOpen(false); setSelectedTicket(null); }} title="Ticket Details" size="large">
           {selectedTicket && (
-            <div className="modal-body">
-              <div className="modal-field">
-                <p className="modal-field-label">Client</p>
-                <p className="modal-field-value">{getClientName(selectedTicket)}</p>
-              </div>
-              <div className="modal-field">
-                <p className="modal-field-label">Client Phone</p>
-                <p className="modal-field-value">{getClientPhone(selectedTicket)}</p>
-              </div>
-              <div className="modal-field">
-                <p className="modal-field-label">Admin</p>
-                <p className="modal-field-value">{getAdminName(selectedTicket)}</p>
-              </div>
-              {selectedTicket.jobId && typeof selectedTicket.jobId === 'object' && (
-                <>
-                  <div className="modal-field">
-                    <p className="modal-field-label">Job ID</p>
-                    <p className="modal-field-value">{getJobId(selectedTicket)}</p>
-                  </div>
-                  <div className="modal-field">
-                    <p className="modal-field-label">Job Status</p>
-                    <p className="modal-field-value">{getJobStatus(selectedTicket)}</p>
-                  </div>
-                  <div className="modal-field">
-                    <p className="modal-field-label">Printer Name</p>
-                    <p className="modal-field-value">{getPrinterName(selectedTicket)}</p>
-                  </div>
-                  {selectedTicket.jobId.createdAt && (
-                    <div className="modal-field">
-                      <p className="modal-field-label">Job Created</p>
-                      <p className="modal-field-value">
-                        {new Date(selectedTicket.jobId.createdAt).toLocaleString()}
-                      </p>
-                    </div>
-                  )}
-                </>
-              )}
-              <div className="modal-field">
-                <p className="modal-field-label">Message</p>
-                <p className="modal-field-value" style={{ whiteSpace: 'pre-wrap' }}>{selectedTicket.message}</p>
+            <div className="space-y-3">
+              <Field label="Client" value={getClientName(selectedTicket)} />
+              <Field label="Admin" value={getAdminName(selectedTicket)} />
+              <Field label="Status" value={selectedTicket.status || 'Open'} />
+              <div>
+                <p className="text-xs font-medium text-gray-500 mb-1">Message</p>
+                <p className="text-sm text-gray-800 whitespace-pre-wrap bg-gray-50 rounded-lg p-3">{selectedTicket.message}</p>
               </div>
               {selectedTicket.response && (
-                <div className="modal-field">
-                  <p className="modal-field-label">Response</p>
-                  <p className="modal-field-value" style={{ whiteSpace: 'pre-wrap' }}>{selectedTicket.response}</p>
+                <div>
+                  <p className="text-xs font-medium text-gray-500 mb-1">Response</p>
+                  <p className="text-sm text-gray-800 whitespace-pre-wrap bg-gray-50 rounded-lg p-3">{selectedTicket.response}</p>
                 </div>
               )}
-              <div className="modal-field">
-                <p className="modal-field-label">Status</p>
-                <p className="modal-field-value">{selectedTicket.status || 'Open'}</p>
-              </div>
-              <div className="modal-field">
-                <p className="modal-field-label">Created</p>
-                <p className="modal-field-value">
-                  {new Date(selectedTicket.createdAt).toLocaleString()}
-                </p>
-              </div>
-              <div className="modal-field">
-                <p className="modal-field-label">Updated</p>
-                <p className="modal-field-value">
-                  {new Date(selectedTicket.updatedAt).toLocaleString()}
-                </p>
-              </div>
-              <div className="form-actions">
-                <button
-                  onClick={() => {
-                    setIsViewModalOpen(false);
-                    setSelectedTicket(null);
-                  }}
-                  className="btn btn-primary"
-                >
-                  Close
-                </button>
-              </div>
+              <Field label="Created" value={new Date(selectedTicket.createdAt).toLocaleString()} />
+              <Field label="Updated" value={new Date(selectedTicket.updatedAt).toLocaleString()} />
             </div>
           )}
         </Modal>
 
-        <Modal
-          isOpen={isEditModalOpen}
-          onClose={() => {
-            setIsEditModalOpen(false);
-            setSelectedTicket(null);
-            setResponseText('');
-          }}
-          title="Respond to Ticket"
-          size="large"
-        >
+        {/* Respond Modal */}
+        <Modal isOpen={isEditModalOpen} onClose={() => { setIsEditModalOpen(false); setSelectedTicket(null); setResponseText(''); }} title="Respond to Ticket" size="large">
           {selectedTicket && (
             <>
-              <div className="modal-field">
-                <p className="modal-field-label">Original Message</p>
-                <p className="modal-field-box">{selectedTicket.message}</p>
+              <div className="mb-4">
+                <p className="text-xs font-medium text-gray-500 mb-1">Original Message</p>
+                <p className="text-sm text-gray-800 bg-gray-50 rounded-lg p-3">{selectedTicket.message}</p>
               </div>
-              <form onSubmit={handleSubmitResponse} className="form-container">
-                <div className="form-group">
-                  <label className="form-label">Response</label>
-                  <textarea
-                    value={responseText}
-                    onChange={(e) => setResponseText(e.target.value)}
-                    required
-                    rows={6}
-                    className="form-textarea"
-                    placeholder="Enter your response..."
-                  />
+              <form onSubmit={(e) => { e.preventDefault(); updateMutation.mutate({ id: selectedTicket._id, data: { response: responseText } }); }} className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Response</label>
+                  <textarea value={responseText} onChange={(e) => setResponseText(e.target.value)} required rows={6}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-gray-900" placeholder="Enter your response..." />
                 </div>
-                <div className="form-actions">
-                  <button
-                    type="submit"
-                    disabled={updateMutation.isPending}
-                    className="btn btn-primary"
-                  >
+                <div className="flex justify-end gap-3">
+                  <button type="button" onClick={() => { setIsEditModalOpen(false); setSelectedTicket(null); setResponseText(''); }} className="px-4 py-2 text-sm font-medium text-gray-700 border border-gray-300 rounded-lg hover:bg-gray-50">Cancel</button>
+                  <button type="submit" disabled={updateMutation.isPending} className="px-4 py-2 text-sm font-medium text-white bg-gray-900 rounded-lg hover:bg-gray-800 disabled:opacity-50">
                     {updateMutation.isPending ? 'Saving...' : 'Save Response'}
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setIsEditModalOpen(false);
-                      setSelectedTicket(null);
-                      setResponseText('');
-                    }}
-                    className="btn btn-secondary"
-                  >
-                    Cancel
                   </button>
                 </div>
               </form>
             </>
           )}
         </Modal>
-
-        {/* Admin Details Modal */}
-        <Modal
-          isOpen={isAdminModalOpen}
-          onClose={() => {
-            setIsAdminModalOpen(false);
-            setSelectedTicket(null);
-          }}
-          title="Admin Details"
-          size="large"
-        >
-          {selectedTicket && typeof selectedTicket.adminId === 'object' && selectedTicket.adminId && (
-            <div className="modal-body">
-              <div className="modal-field">
-                <p className="modal-field-label">Name</p>
-                <p className="modal-field-value">{selectedTicket.adminId.name || '-'}</p>
-              </div>
-              <div className="modal-field">
-                <p className="modal-field-label">Email</p>
-                <p className="modal-field-value">{selectedTicket.adminId.email || '-'}</p>
-              </div>
-              {selectedTicket.adminId.businessName && (
-                <div className="modal-field">
-                  <p className="modal-field-label">Business Name</p>
-                  <p className="modal-field-value">{selectedTicket.adminId.businessName}</p>
-                </div>
-              )}
-              {selectedTicket.adminId.businessPhone && (
-                <div className="modal-field">
-                  <p className="modal-field-label">Business Phone</p>
-                  <p className="modal-field-value">{selectedTicket.adminId.businessPhone}</p>
-                </div>
-              )}
-              {selectedTicket.adminId.role && (
-                <div className="modal-field">
-                  <p className="modal-field-label">Role</p>
-                  <p className="modal-field-value">{selectedTicket.adminId.role}</p>
-                </div>
-              )}
-              <div className="modal-field">
-                <p className="modal-field-label">Status</p>
-                <p className="modal-field-value">
-                  <span className={`status-badge ${selectedTicket.adminId.isActive ? 'active' : 'inactive'}`}>
-                    {selectedTicket.adminId.isActive ? 'Active' : 'Inactive'}
-                  </span>
-                </p>
-              </div>
-              {selectedTicket.adminId.paystackSubaccountCode && (
-                <div className="modal-field">
-                  <p className="modal-field-label">Paystack Subaccount Code</p>
-                  <p className="modal-field-value">{selectedTicket.adminId.paystackSubaccountCode}</p>
-                </div>
-              )}
-              {selectedTicket.adminId.location && (
-                <>
-                  {selectedTicket.adminId.location.address && (
-                    <div className="modal-field">
-                      <p className="modal-field-label">Address</p>
-                      <p className="modal-field-value">{selectedTicket.adminId.location.address}</p>
-                    </div>
-                  )}
-                  <div className="modal-field">
-                    <p className="modal-field-label">Location</p>
-                    <p className="modal-field-value">
-                      Lat: {selectedTicket.adminId.location.latitude}, 
-                      Lng: {selectedTicket.adminId.location.longitude}
-                    </p>
-                  </div>
-                </>
-              )}
-              {selectedTicket.adminId.createdAt && (
-                <div className="modal-field">
-                  <p className="modal-field-label">Created</p>
-                  <p className="modal-field-value">
-                    {new Date(selectedTicket.adminId.createdAt).toLocaleString()}
-                  </p>
-                </div>
-              )}
-              {selectedTicket.adminId.updatedAt && (
-                <div className="modal-field">
-                  <p className="modal-field-label">Updated</p>
-                  <p className="modal-field-value">
-                    {new Date(selectedTicket.adminId.updatedAt).toLocaleString()}
-                  </p>
-                </div>
-              )}
-              <div className="form-actions">
-                <button
-                  onClick={() => {
-                    setIsAdminModalOpen(false);
-                    setSelectedTicket(null);
-                  }}
-                  className="btn btn-primary"
-                >
-                  Close
-                </button>
-              </div>
-            </div>
-          )}
-        </Modal>
-
-        {/* Client Details Modal */}
-        <Modal
-          isOpen={isClientModalOpen}
-          onClose={() => {
-            setIsClientModalOpen(false);
-            setSelectedTicket(null);
-          }}
-          title="Client Details"
-          size="large"
-        >
-          {selectedTicket && typeof selectedTicket.clientId === 'object' && selectedTicket.clientId && (
-            <div className="modal-body">
-              <div className="modal-field">
-                <p className="modal-field-label">Full Name</p>
-                <p className="modal-field-value">{selectedTicket.clientId.fullName || '-'}</p>
-              </div>
-              <div className="modal-field">
-                <p className="modal-field-label">Email</p>
-                <p className="modal-field-value">{selectedTicket.clientId.email || '-'}</p>
-              </div>
-              <div className="modal-field">
-                <p className="modal-field-label">Phone Number</p>
-                <p className="modal-field-value">{selectedTicket.clientId.phoneNumber || '-'}</p>
-              </div>
-              <div className="modal-field">
-                <p className="modal-field-label">Status</p>
-                <p className="modal-field-value">
-                  <span className={`status-badge ${selectedTicket.clientId.isActive ? 'active' : 'inactive'}`}>
-                    {selectedTicket.clientId.isActive ? 'Active' : 'Inactive'}
-                  </span>
-                </p>
-              </div>
-              {selectedTicket.clientId.lastLogin && (
-                <div className="modal-field">
-                  <p className="modal-field-label">Last Login</p>
-                  <p className="modal-field-value">
-                    {new Date(selectedTicket.clientId.lastLogin).toLocaleString()}
-                  </p>
-                </div>
-              )}
-              {selectedTicket.clientId.createdAt && (
-                <div className="modal-field">
-                  <p className="modal-field-label">Created</p>
-                  <p className="modal-field-value">
-                    {new Date(selectedTicket.clientId.createdAt).toLocaleString()}
-                  </p>
-                </div>
-              )}
-              {selectedTicket.clientId.updatedAt && (
-                <div className="modal-field">
-                  <p className="modal-field-label">Updated</p>
-                  <p className="modal-field-value">
-                    {new Date(selectedTicket.clientId.updatedAt).toLocaleString()}
-                  </p>
-                </div>
-              )}
-              <div className="form-actions">
-                <button
-                  onClick={() => {
-                    setIsClientModalOpen(false);
-                    setSelectedTicket(null);
-                  }}
-                  className="btn btn-primary"
-                >
-                  Close
-                </button>
-              </div>
-            </div>
-          )}
-        </Modal>
       </div>
     </Layout>
   );
 };
+
+const Field = ({ label, value }: { label: string; value: string }) => (
+  <div>
+    <p className="text-xs font-medium text-gray-500">{label}</p>
+    <p className="text-sm text-gray-800">{value}</p>
+  </div>
+);

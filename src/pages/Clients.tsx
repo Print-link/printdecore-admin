@@ -4,9 +4,6 @@ import { clientService } from '../services/superAdminService';
 import { LoadingSpinner } from '../components/LoadingSpinner';
 import { Layout } from '../components/Layout';
 import { Pagination } from '../components/Pagination';
-import '../styles/pages.css';
-import '../styles/table.css';
-import '../styles/forms.css';
 
 export const Clients = () => {
   const [page, setPage] = useState(1);
@@ -15,43 +12,21 @@ export const Clients = () => {
 
   const { data, isLoading } = useQuery({
     queryKey: ['clients', page, search, statusFilter],
-    queryFn: () =>
-      clientService.getAll({
-        page,
-        limit: 10,
-        search: search || undefined,
-        isActive: statusFilter ? statusFilter === 'active' : undefined,
-      }),
+    queryFn: () => clientService.getAll({ page, limit: 10, search: search || undefined, isActive: statusFilter ? statusFilter === 'active' : undefined }),
   });
 
   return (
     <Layout>
-      <div className="page-container">
-        <div className="page-header">
-          <div>
-            <h1 className="page-title">Clients Management</h1>
-          </div>
-        </div>
+      <div>
+        <h1 className="text-2xl font-bold text-gray-900 mb-6">Clients</h1>
 
-        <div className="filters">
-          <input
-            type="text"
-            placeholder="Search clients..."
-            value={search}
-            onChange={(e) => {
-              setSearch(e.target.value);
-              setPage(1);
-            }}
-            className="filter-input"
+        <div className="flex gap-3 mb-4">
+          <input type="text" placeholder="Search clients..." value={search}
+            onChange={(e) => { setSearch(e.target.value); setPage(1); }}
+            className="w-full max-w-sm px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-gray-900"
           />
-          <select
-            value={statusFilter}
-            onChange={(e) => {
-              setStatusFilter(e.target.value);
-              setPage(1);
-            }}
-            className="filter-select"
-          >
+          <select value={statusFilter} onChange={(e) => { setStatusFilter(e.target.value); setPage(1); }}
+            className="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-gray-900">
             <option value="">All Status</option>
             <option value="active">Active</option>
             <option value="inactive">Inactive</option>
@@ -59,57 +34,40 @@ export const Clients = () => {
         </div>
 
         {isLoading ? (
-          <div className="loading-container">
-            <LoadingSpinner />
-          </div>
+          <div className="flex justify-center py-16"><LoadingSpinner /></div>
         ) : (
           <>
-            <div className="table-container">
-              <table className="table">
-                <thead className="table-header">
+            <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
+              <table className="w-full text-sm">
+                <thead className="bg-gray-50 border-b border-gray-200">
                   <tr>
-                    <th>Name</th>
-                    <th>Email</th>
-                    <th>Phone</th>
-                    <th>Status</th>
-                    <th>Last Login</th>
-                    <th>Created</th>
+                    <th className="text-left px-4 py-3 font-medium text-gray-500">Name</th>
+                    <th className="text-left px-4 py-3 font-medium text-gray-500">Email</th>
+                    <th className="text-left px-4 py-3 font-medium text-gray-500">Phone</th>
+                    <th className="text-left px-4 py-3 font-medium text-gray-500">Status</th>
+                    <th className="text-left px-4 py-3 font-medium text-gray-500">Last Login</th>
+                    <th className="text-left px-4 py-3 font-medium text-gray-500">Created</th>
                   </tr>
                 </thead>
-                <tbody className="table-body">
-                  {data?.clients.map((client, index) => (
-                    <tr key={client._id} className="table-row">
-                      <td className="table-cell">{client.fullName}</td>
-                      <td className="table-cell">{client.email}</td>
-                      <td className="table-cell">{client.phoneNumber}</td>
-                      <td className="table-cell">
-                        <span className={`status-badge ${client.isActive ? 'active' : 'inactive'}`}>
+                <tbody className="divide-y divide-gray-100">
+                  {data?.clients.map((client) => (
+                    <tr key={client._id} className="hover:bg-gray-50">
+                      <td className="px-4 py-3 font-medium text-gray-900">{client.fullName}</td>
+                      <td className="px-4 py-3 text-gray-600">{client.email}</td>
+                      <td className="px-4 py-3 text-gray-600">{client.phoneNumber}</td>
+                      <td className="px-4 py-3">
+                        <span className={`inline-flex px-2 py-0.5 text-xs font-medium rounded-full ${client.isActive ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-600'}`}>
                           {client.isActive ? 'Active' : 'Inactive'}
                         </span>
                       </td>
-                      <td className="table-cell">
-                        {client.lastLogin
-                          ? new Date(client.lastLogin).toLocaleDateString()
-                          : 'Never'}
-                      </td>
-                      <td className="table-cell">
-                        {new Date(client.createdAt).toLocaleDateString()}
-                      </td>
+                      <td className="px-4 py-3 text-gray-500">{client.lastLogin ? new Date(client.lastLogin).toLocaleDateString() : 'Never'}</td>
+                      <td className="px-4 py-3 text-gray-500">{new Date(client.createdAt).toLocaleDateString()}</td>
                     </tr>
                   ))}
                 </tbody>
               </table>
             </div>
-
-            {data?.pagination && (
-              <Pagination
-                currentPage={data.pagination.currentPage}
-                totalPages={data.pagination.totalPages}
-                totalItems={data.pagination.totalItems}
-                itemsPerPage={data.pagination.itemsPerPage}
-                onPageChange={setPage}
-              />
-            )}
+            {data?.pagination && <Pagination {...data.pagination} onPageChange={setPage} />}
           </>
         )}
       </div>
