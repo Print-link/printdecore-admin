@@ -16,6 +16,9 @@ import { Reports } from "./pages/Reports";
 import { WhatsApp } from "./pages/WhatsApp";
 import { ActivityLogs } from "./pages/ActivityLogs";
 import { Roles } from "./pages/Roles";
+import BlogPosts from "./pages/BlogPosts";
+import { Waitlist } from "./pages/Waitlist";
+import { Discounts } from "./pages/Discounts";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -39,6 +42,9 @@ const protectedRoutes = [
   { path: "/activity-logs", element: <ActivityLogs /> },
   { path: "/roles", element: <Roles /> },
   { path: "/support", element: <Support /> },
+  { path: "/blog", element: <BlogPosts /> },
+  { path: "/waitlist", element: <Waitlist /> },
+  { path: "/discounts", element: <Discounts /> },
 ];
 
 function App() {

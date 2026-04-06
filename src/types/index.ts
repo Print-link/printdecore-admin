@@ -1,9 +1,8 @@
 export interface SuperAdmin {
-  _id: string;
+  id: string;
   email: string;
   name: string;
   isActive: boolean;
-  lastLogin?: string;
   createdAt: string;
   updatedAt: string;
 }
@@ -66,11 +65,14 @@ export interface SupportTicket {
 }
 
 export interface DashboardStats {
-  users: { total: number; active: number; inactive: number };
-  clerks: { total: number; active: number; inactive: number };
-  clients: { total: number; active: number; inactive: number };
-  supportTickets: { total: number };
-  printJobs: { total: number; pending: number; completed: number };
+  totalUsers: number;
+  totalClerks: number;
+  totalClients: number;
+  totalOrders: number;
+  totalBranches: number;
+  activeUsers: number;
+  activeClerks: number;
+  recentOrders: number;
 }
 
 export interface PaginatedResponse<T> {
@@ -251,6 +253,42 @@ export interface WhatsAppBroadcast {
   scheduledAt?: string;
   completedAt?: string;
   createdAt: string;
+}
+
+export interface WaitlistEntry {
+  id: string;
+  email: string;
+  name: string | null;
+  phone: string | null;
+  userType: 'customer' | 'vendor';
+  country: string;
+  city: string | null;
+  referralSource: string | null;
+  createdAt: string;
+}
+
+export interface Discount {
+  id: string;
+  code: string;
+  name: string;
+  description?: string;
+  discountType: 'percentage' | 'fixed';
+  discountValue: number;
+  currency: string;
+  scope: 'platform' | 'manager';
+  managerId?: string;
+  branchId?: string;
+  targetType: 'all' | 'customer' | 'waitlist' | 'branch';
+  maxUses?: number;
+  maxUsesPerCustomer: number;
+  currentUses: number;
+  minOrderAmount?: number;
+  maxDiscountAmount?: number;
+  startsAt: string;
+  expiresAt?: string;
+  isActive: boolean;
+  createdAt: string;
+  updatedAt: string;
 }
 
 export interface RevenueReport {

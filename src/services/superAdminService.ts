@@ -1,4 +1,3 @@
-import axios from 'axios';
 import api from '../config/api';
 import type {
   SuperAdmin,
@@ -18,13 +17,11 @@ import type {
   RevenueReport,
 } from '../types';
 
-const SUPERADMIN_URL = 'http://localhost:5000/api';
-
 // Auth
 export const superAdminAuth = {
   login: async (email: string, password: string) => {
-    const response = await axios.post(
-      `${SUPERADMIN_URL}/superadmin/login`,
+    const response = await api.post<{ success: boolean; data: { superAdmin: SuperAdmin; token: string } }>(
+      '/superadmin/login',
       { email, password }
     );
     return response.data;
@@ -344,5 +341,98 @@ export const whatsappAdminService = {
         itemsPerPage: params?.limit || 10,
       }
     };
+  },
+};
+
+// Discounts
+export const discountService = {
+  getAll: async (params?: { scope?: string; isActive?: string }) => {
+    const response = await api.get<{ success: boolean; data: import('../types').Discount[] }>('/discounts', { params });
+    return response.data.data || [];
+  },
+  getById: async (id: string) => {
+    const response = await api.get<{ success: boolean; data: import('../types').Discount }>(`/discounts/${id}`);
+    return response.data.data;
+  },
+  create: async (data: Partial<import('../types').Discount>) => {
+    const response = await api.post<{ success: boolean; data: import('../types').Discount }>('/discounts', data);
+    return response.data.data;
+  },
+  update: async (id: string, data: Partial<import('../types').Discount>) => {
+    const response = await api.put<{ success: boolean; data: import('../types').Discount }>(`/discounts/${id}`, data);
+    return response.data.data;
+  },
+  delete: async (id: string) => {
+    const response = await api.delete<{ success: boolean }>(`/discounts/${id}`);
+    return response.data;
+  },
+  assign: async (id: string, data: { customerIds?: string[]; waitlistIds?: string[]; emails?: string[] }) => {
+    const response = await api.post<{ success: boolean; data: { assigned: number; total: number } }>(`/discounts/${id}/assign`, data);
+    return response.data.data;
+  },
+  getAssignments: async (id: string) => {
+    const response = await api.get<{ success: boolean; data: any[] }>(`/discounts/${id}/assignments`);
+    return response.data.data || [];
+  },
+  removeAssignment: async (assignmentId: string) => {
+    const response = await api.delete<{ success: boolean }>(`/discounts/assignments/${assignmentId}`);
+    return response.data;
+  },
+};
+
+// Waitlist
+export const waitlistService = {
+  getAll: async (params?: { userType?: string; country?: string }) => {
+    const response = await api.get<{ success: boolean; data: import('../types').WaitlistEntry[] }>('/waitlist', { params });
+    return response.data.data || [];
+  },
+  getCount: async (params?: { userType?: string; country?: string }) => {
+    const response = await api.get<{ success: boolean; data: { count: number } }>('/waitlist/count', { params });
+    return response.data.data.count;
+  },
+  delete: async (id: string) => {
+    const response = await api.delete<{ success: boolean }>(`/waitlist/${id}`);
+    return response.data;
+  },
+};
+
+// Blog
+export interface BlogPost {
+  id: string;
+  title: string;
+  slug: string;
+  excerpt: string | null;
+  content: string;
+  coverImage: string | null;
+  category: string;
+  tags: string[];
+  status: 'draft' | 'published';
+  authorName: string;
+  readTime: string | null;
+  publishedAt: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export const blogService = {
+  getAll: async () => {
+    const response = await api.get<{ success: boolean; data: BlogPost[]; count: number }>('/blog');
+    return response.data.data || [];
+  },
+  getById: async (id: string) => {
+    const response = await api.get<{ success: boolean; data: BlogPost }>(`/blog/${id}`);
+    return response.data.data;
+  },
+  create: async (data: Partial<BlogPost>) => {
+    const response = await api.post<{ success: boolean; data: BlogPost }>('/blog', data);
+    return response.data.data;
+  },
+  update: async (id: string, data: Partial<BlogPost>) => {
+    const response = await api.put<{ success: boolean; data: BlogPost }>(`/blog/${id}`, data);
+    return response.data.data;
+  },
+  delete: async (id: string) => {
+    const response = await api.delete<{ success: boolean }>(`/blog/${id}`);
+    return response.data;
   },
 };

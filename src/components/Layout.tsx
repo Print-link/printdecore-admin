@@ -18,6 +18,9 @@ const navigation = [
   { name: 'Activity Logs', path: '/activity-logs', icon: 'M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z' },
   { name: 'Roles & Permissions', path: '/roles', icon: 'M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z' },
   { name: 'Support Tickets', path: '/support', icon: 'M18.364 5.636l-3.536 3.536m0 5.656l3.536 3.536M9.172 9.172L5.636 5.636m3.536 9.192l-3.536 3.536M21 12a9 9 0 11-18 0 9 9 0 0118 0zm-5 0a4 4 0 11-8 0 4 4 0 018 0z' },
+  { name: 'Blog Posts', path: '/blog', icon: 'M19 20H5a2 2 0 01-2-2V6a2 2 0 012-2h10a2 2 0 012 2v1m2 13a2 2 0 01-2-2V7m2 13a2 2 0 002-2V9a2 2 0 00-2-2h-2m-4-3H9M7 16h6M7 8h6v4H7V8z' },
+  { name: 'Waitlist', path: '/waitlist', icon: 'M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197m7.5-3.803h.008v.008H16.5V8.25zm.375 0a.375.375 0 11-.75 0 .375.375 0 01.75 0z' },
+  { name: 'Discounts', path: '/discounts', icon: 'M9 14.25l3-3m0 0l3 3m-3-3v8.25M3 9l9-6 9 6m-1.5 12V10.332A48.36 48.36 0 0012 9.75a48.36 48.36 0 00-7.5.582V21' },
 ];
 
 export const Layout = ({ children }: LayoutProps) => {
