@@ -1,9 +1,14 @@
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
+import { UserRound } from 'lucide-react';
 import { clientService } from '../services/superAdminService';
 import { LoadingSpinner } from '../components/LoadingSpinner';
 import { Layout } from '../components/Layout';
 import { Pagination } from '../components/Pagination';
+import { PageHeader } from '../components/ui/PageHeader';
+import { ListGroup, ListRow } from '../components/ui/ListGroup';
+import { Badge } from '../components/ui/Badge';
+import { iosInputCls } from '../components/ui/FormField';
 
 export const Clients = () => {
   const [page, setPage] = useState(1);
@@ -18,15 +23,15 @@ export const Clients = () => {
   return (
     <Layout>
       <div>
-        <h1 className="text-2xl font-bold text-gray-900 mb-6">Clients</h1>
+        <PageHeader title="Clients" />
 
-        <div className="flex gap-3 mb-4">
+        <div className="flex gap-3 mb-3">
           <input type="text" placeholder="Search clients..." value={search}
             onChange={(e) => { setSearch(e.target.value); setPage(1); }}
-            className="w-full max-w-sm px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-gray-900"
+            className={`max-w-sm ${iosInputCls}`}
           />
           <select value={statusFilter} onChange={(e) => { setStatusFilter(e.target.value); setPage(1); }}
-            className="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-gray-900">
+            className={`max-w-40 ${iosInputCls}`}>
             <option value="">All Status</option>
             <option value="active">Active</option>
             <option value="inactive">Inactive</option>
@@ -37,36 +42,31 @@ export const Clients = () => {
           <div className="flex justify-center py-16"><LoadingSpinner /></div>
         ) : (
           <>
-            <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
-              <table className="w-full text-sm">
-                <thead className="bg-gray-50 border-b border-gray-200">
-                  <tr>
-                    <th className="text-left px-4 py-3 font-medium text-gray-500">Name</th>
-                    <th className="text-left px-4 py-3 font-medium text-gray-500">Email</th>
-                    <th className="text-left px-4 py-3 font-medium text-gray-500">Phone</th>
-                    <th className="text-left px-4 py-3 font-medium text-gray-500">Status</th>
-                    <th className="text-left px-4 py-3 font-medium text-gray-500">Last Login</th>
-                    <th className="text-left px-4 py-3 font-medium text-gray-500">Created</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-gray-100">
-                  {data?.clients.map((client) => (
-                    <tr key={client._id} className="hover:bg-gray-50">
-                      <td className="px-4 py-3 font-medium text-gray-900">{client.fullName}</td>
-                      <td className="px-4 py-3 text-gray-600">{client.email}</td>
-                      <td className="px-4 py-3 text-gray-600">{client.phoneNumber}</td>
-                      <td className="px-4 py-3">
-                        <span className={`inline-flex px-2 py-0.5 text-xs font-medium rounded-full ${client.isActive ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-600'}`}>
-                          {client.isActive ? 'Active' : 'Inactive'}
-                        </span>
-                      </td>
-                      <td className="px-4 py-3 text-gray-500">{client.lastLogin ? new Date(client.lastLogin).toLocaleDateString() : 'Never'}</td>
-                      <td className="px-4 py-3 text-gray-500">{new Date(client.createdAt).toLocaleDateString()}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+            <ListGroup>
+              {data?.clients.map((client) => (
+                <ListRow
+                  key={client.email}
+                  leading={
+                    <div className="w-10 h-10 rounded-xl bg-brand/15 flex items-center justify-center">
+                      <UserRound className="w-5 h-5 text-brand-hover" />
+                    </div>
+                  }
+                  title={client.fullName}
+                  subtitle={client.email || client.phoneNumber}
+                  trailing={
+                    <>
+                      <span className="text-xs text-ios-gray hidden md:block">
+                        {client.lastLogin ? `Last login ${new Date(client.lastLogin).toLocaleDateString()}` : 'Never logged in'}
+                      </span>
+                      <Badge variant={client.isActive ? 'success' : 'neutral'}>{client.isActive ? 'Active' : 'Inactive'}</Badge>
+                    </>
+                  }
+                />
+              ))}
+              {data?.clients.length === 0 && (
+                <div className="px-4 py-12 text-center text-ios-gray">No clients yet</div>
+              )}
+            </ListGroup>
             {data?.pagination && <Pagination {...data.pagination} onPageChange={setPage} />}
           </>
         )}

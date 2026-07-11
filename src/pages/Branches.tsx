@@ -1,14 +1,22 @@
 import { useState, useEffect, useRef } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { MoreVertical, Building2 } from 'lucide-react';
 import { branchService, userService } from '../services/superAdminService';
 import { LoadingSpinner } from '../components/LoadingSpinner';
 import { Layout } from '../components/Layout';
 import { Modal } from '../components/Modal';
 import { Pagination } from '../components/Pagination';
+import { PageHeader } from '../components/ui/PageHeader';
+import { ListGroup, ListRow } from '../components/ui/ListGroup';
+import { Badge } from '../components/ui/Badge';
+import { Button } from '../components/ui/Button';
+import { FormField, iosInputCls } from '../components/ui/FormField';
 import toast from 'react-hot-toast';
 import type { Branch, User } from '../types';
 
 export const Branches = () => {
+  const navigate = useNavigate();
   const [page, setPage] = useState(1);
   const [search, setSearch] = useState('');
   const [editingBranch, setEditingBranch] = useState<Branch | null>(null);
@@ -80,23 +88,19 @@ export const Branches = () => {
     updateMutation.mutate({ id: editingBranch.id, data: formData });
   };
 
-  const inputCls = "w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-gray-900 focus:border-transparent";
-
   return (
     <Layout>
       <div>
-        <div className="flex items-center justify-between mb-6">
-          <h1 className="text-2xl font-bold text-gray-900">Branches</h1>
-          <button onClick={() => setIsCreateModalOpen(true)} className="px-4 py-2 bg-gray-900 text-white text-sm font-medium rounded-lg hover:bg-gray-800">
-            Create Branch
-          </button>
-        </div>
+        <PageHeader
+          title="Branches"
+          actions={<Button size="sm" onClick={() => setIsCreateModalOpen(true)}>Create Branch</Button>}
+        />
 
-        <div className="mb-4">
+        <div className="mb-3">
           <input
             type="text" placeholder="Search branches..." value={search}
             onChange={(e) => { setSearch(e.target.value); setPage(1); }}
-            className="w-full max-w-sm px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-gray-900 focus:border-transparent"
+            className={`max-w-sm ${iosInputCls}`}
           />
         </div>
 
@@ -104,53 +108,52 @@ export const Branches = () => {
           <div className="flex justify-center py-16"><LoadingSpinner /></div>
         ) : (
           <>
-            <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
-              <table className="w-full text-sm">
-                <thead className="bg-gray-50 border-b border-gray-200">
-                  <tr>
-                    <th className="text-left px-4 py-3 font-medium text-gray-500">Branch Name</th>
-                    <th className="text-left px-4 py-3 font-medium text-gray-500">Manager</th>
-                    <th className="text-left px-4 py-3 font-medium text-gray-500">Email</th>
-                    <th className="text-left px-4 py-3 font-medium text-gray-500">Phone</th>
-                    <th className="text-left px-4 py-3 font-medium text-gray-500">Status</th>
-                    <th className="text-right px-4 py-3 font-medium text-gray-500">Actions</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-gray-100">
-                  {data?.branches.map((branch) => (
-                    <tr key={branch.id} className="hover:bg-gray-50">
-                      <td className="px-4 py-3">
-                        <div className="flex items-center gap-2">
-                          {branch.branchCoverImage && <img src={branch.branchCoverImage} alt="" className="w-7 h-7 rounded object-cover" />}
-                          <span className="font-medium text-gray-900">{branch.name}</span>
-                        </div>
-                      </td>
-                      <td className="px-4 py-3 text-gray-600">{branch.manager_id}</td>
-                      <td className="px-4 py-3 text-gray-600">{branch.branchEmailAddress}</td>
-                      <td className="px-4 py-3 text-gray-600">{branch.phoneNumber}</td>
-                      <td className="px-4 py-3">
-                        <span className={`inline-flex px-2 py-0.5 text-xs font-medium rounded-full ${branch.status === 'active' || !branch.status ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-600'}`}>
-                          {branch.status || 'Active'}
-                        </span>
-                      </td>
-                      <td className="px-4 py-3 text-right">
-                        <div className="relative inline-block" ref={(el) => { dropdownRefs.current[branch.id] = el; }}>
-                          <button onClick={() => setOpenDropdownId(openDropdownId === branch.id ? null : branch.id)} className="p-1 text-gray-400 hover:text-gray-600" type="button">
-                            <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20"><path d="M10 6a2 2 0 110-4 2 2 0 010 4zM10 12a2 2 0 110-4 2 2 0 010 4zM10 18a2 2 0 110-4 2 2 0 010 4z" /></svg>
-                          </button>
-                          {openDropdownId === branch.id && (
-                            <div className="absolute right-0 mt-1 w-36 bg-white rounded-lg shadow-lg border border-gray-200 py-1 z-10">
-                              <button onClick={() => { setEditingBranch(branch); setIsEditModalOpen(true); setOpenDropdownId(null); }} className="w-full text-left px-3 py-1.5 text-sm text-gray-700 hover:bg-gray-50">Edit</button>
-                              <button onClick={() => { if (window.confirm('Delete this branch?')) deleteMutation.mutate(branch.id); setOpenDropdownId(null); }} className="w-full text-left px-3 py-1.5 text-sm text-red-600 hover:bg-red-50">Delete</button>
-                            </div>
-                          )}
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+            <ListGroup>
+              {data?.branches.map((branch) => (
+                <ListRow
+                  key={branch.id}
+                  onClick={() => navigate(`/branches/${branch.id}`)}
+                  leading={
+                    branch.branchCoverImage ? (
+                      <img src={branch.branchCoverImage} alt="" className="w-10 h-10 rounded-xl object-cover" />
+                    ) : (
+                      <div className="w-10 h-10 rounded-xl bg-brand/15 flex items-center justify-center">
+                        <Building2 className="w-5 h-5 text-brand-hover" />
+                      </div>
+                    )
+                  }
+                  title={branch.name}
+                  subtitle={branch.branchEmailAddress || branch.phoneNumber}
+                  trailing={
+                    <>
+                      <Badge variant={branch.status === 'active' || !branch.status ? 'success' : 'neutral'}>
+                        {branch.status || 'Active'}
+                      </Badge>
+                      <div className="relative" ref={(el) => { dropdownRefs.current[branch.id] = el; }} onClick={(e) => e.stopPropagation()}>
+                        <button
+                          onClick={() => setOpenDropdownId(openDropdownId === branch.id ? null : branch.id)}
+                          className="p-1.5 rounded-full text-ios-gray hover:bg-ios-gray6"
+                          type="button"
+                          aria-label="More actions"
+                        >
+                          <MoreVertical className="w-4 h-4" />
+                        </button>
+                        {openDropdownId === branch.id && (
+                          <div className="absolute right-0 mt-1 w-36 bg-white rounded-ios shadow-ios border border-ios-gray5 py-1 z-10">
+                            <button onClick={() => { setEditingBranch(branch); setIsEditModalOpen(true); setOpenDropdownId(null); }} className="w-full text-left px-3 py-1.5 text-sm text-ios-label hover:bg-ios-gray6">Edit</button>
+                            <button onClick={() => { if (window.confirm('Delete this branch?')) deleteMutation.mutate(branch.id); setOpenDropdownId(null); }} className="w-full text-left px-3 py-1.5 text-sm text-ios-red hover:bg-ios-red/10">Delete</button>
+                          </div>
+                        )}
+                      </div>
+                    </>
+                  }
+                  chevron
+                />
+              ))}
+              {data?.branches.length === 0 && (
+                <div className="px-4 py-12 text-center text-ios-gray">No branches yet</div>
+              )}
+            </ListGroup>
             {data?.pagination && <Pagination {...data.pagination} onPageChange={setPage} />}
           </>
         )}
@@ -158,40 +161,34 @@ export const Branches = () => {
         {/* Create Modal */}
         <Modal isOpen={isCreateModalOpen} onClose={() => setIsCreateModalOpen(false)} title="Create New Branch">
           <form onSubmit={handleSubmitCreate} className="space-y-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Branch Name</label>
-              <input type="text" name="name" required className={inputCls} placeholder="e.g. Main Street Branch" />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Manager</label>
-              <select name="manager_id" required className={inputCls}>
+            <FormField label="Branch Name">
+              <input type="text" name="name" required className={iosInputCls} placeholder="e.g. Main Street Branch" />
+            </FormField>
+            <FormField label="Manager">
+              <select name="manager_id" required className={iosInputCls}>
                 <option value="">Select Manager</option>
                 {(managersData?.users as any)?.map((u: User) => (
                   <option key={u._id} value={u._id}>{u.name} ({u.email})</option>
                 ))}
               </select>
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
-              <input type="email" name="branchEmailAddress" required className={inputCls} />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Phone</label>
-              <input type="text" name="phoneNumber" required className={inputCls} />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Cover Image</label>
-              <input type="file" name="branchCoverImage" accept="image/*" className={inputCls} />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Paystack Subaccount ID (Optional)</label>
-              <input type="text" name="payStackSubAccountId" className={inputCls} />
-            </div>
+            </FormField>
+            <FormField label="Email">
+              <input type="email" name="branchEmailAddress" required className={iosInputCls} />
+            </FormField>
+            <FormField label="Phone">
+              <input type="text" name="phoneNumber" required className={iosInputCls} />
+            </FormField>
+            <FormField label="Cover Image">
+              <input type="file" name="branchCoverImage" accept="image/*" className={iosInputCls} />
+            </FormField>
+            <FormField label="Paystack Subaccount ID (Optional)">
+              <input type="text" name="payStackSubAccountId" className={iosInputCls} />
+            </FormField>
             <div className="flex justify-end gap-3 pt-2">
-              <button type="button" onClick={() => setIsCreateModalOpen(false)} className="px-4 py-2 text-sm font-medium text-gray-700 border border-gray-300 rounded-lg hover:bg-gray-50">Cancel</button>
-              <button type="submit" disabled={createMutation.isPending} className="px-4 py-2 text-sm font-medium text-white bg-gray-900 rounded-lg hover:bg-gray-800 disabled:opacity-50">
+              <Button type="button" variant="secondary" onClick={() => setIsCreateModalOpen(false)}>Cancel</Button>
+              <Button type="submit" disabled={createMutation.isPending}>
                 {createMutation.isPending ? 'Creating...' : 'Create Branch'}
-              </button>
+              </Button>
             </div>
           </form>
         </Modal>
@@ -200,47 +197,40 @@ export const Branches = () => {
         <Modal isOpen={isEditModalOpen} onClose={() => { setIsEditModalOpen(false); setEditingBranch(null); }} title="Edit Branch">
           {editingBranch && (
             <form onSubmit={handleSubmitEdit} className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Branch Name</label>
-                <input type="text" name="name" defaultValue={editingBranch.name} required className={inputCls} />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Manager</label>
-                <select name="manager_id" defaultValue={editingBranch.manager_id} required className={inputCls}>
+              <FormField label="Branch Name">
+                <input type="text" name="name" defaultValue={editingBranch.name} required className={iosInputCls} />
+              </FormField>
+              <FormField label="Manager">
+                <select name="manager_id" defaultValue={editingBranch.manager_id} required className={iosInputCls}>
                   {(managersData?.users as any)?.map((u: User) => (
                     <option key={u._id} value={u._id}>{u.name} ({u.email})</option>
                   ))}
                 </select>
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
-                <input type="email" name="branchEmailAddress" defaultValue={editingBranch.branchEmailAddress} required className={inputCls} />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Phone</label>
-                <input type="text" name="phoneNumber" defaultValue={editingBranch.phoneNumber} required className={inputCls} />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Cover Image</label>
-                <input type="file" name="branchCoverImage" accept="image/*" className={inputCls} />
-                {editingBranch.branchCoverImage && <p className="text-xs text-gray-400 mt-1">Leave empty to keep current image</p>}
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Paystack Subaccount ID</label>
-                <input type="text" name="payStackSubAccountId" defaultValue={editingBranch.payStackSubAccountId || ''} className={inputCls} />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Status</label>
-                <select name="status" defaultValue={editingBranch.status || 'active'} className={inputCls}>
+              </FormField>
+              <FormField label="Email">
+                <input type="email" name="branchEmailAddress" defaultValue={editingBranch.branchEmailAddress} required className={iosInputCls} />
+              </FormField>
+              <FormField label="Phone">
+                <input type="text" name="phoneNumber" defaultValue={editingBranch.phoneNumber} required className={iosInputCls} />
+              </FormField>
+              <FormField label="Cover Image">
+                <input type="file" name="branchCoverImage" accept="image/*" className={iosInputCls} />
+                {editingBranch.branchCoverImage && <p className="text-xs text-ios-secondary-label mt-1">Leave empty to keep current image</p>}
+              </FormField>
+              <FormField label="Paystack Subaccount ID">
+                <input type="text" name="payStackSubAccountId" defaultValue={editingBranch.payStackSubAccountId || ''} className={iosInputCls} />
+              </FormField>
+              <FormField label="Status">
+                <select name="status" defaultValue={editingBranch.status || 'active'} className={iosInputCls}>
                   <option value="active">Active</option>
                   <option value="inactive">Inactive</option>
                 </select>
-              </div>
+              </FormField>
               <div className="flex justify-end gap-3 pt-2">
-                <button type="button" onClick={() => { setIsEditModalOpen(false); setEditingBranch(null); }} className="px-4 py-2 text-sm font-medium text-gray-700 border border-gray-300 rounded-lg hover:bg-gray-50">Cancel</button>
-                <button type="submit" disabled={updateMutation.isPending} className="px-4 py-2 text-sm font-medium text-white bg-gray-900 rounded-lg hover:bg-gray-800 disabled:opacity-50">
+                <Button type="button" variant="secondary" onClick={() => { setIsEditModalOpen(false); setEditingBranch(null); }}>Cancel</Button>
+                <Button type="submit" disabled={updateMutation.isPending}>
                   {updateMutation.isPending ? 'Saving...' : 'Save Changes'}
-                </button>
+                </Button>
               </div>
             </form>
           )}

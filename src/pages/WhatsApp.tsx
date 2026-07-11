@@ -2,6 +2,22 @@ import { useQuery } from '@tanstack/react-query';
 import { whatsappAdminService } from '../services/superAdminService';
 import { LoadingSpinner } from '../components/LoadingSpinner';
 import { Layout } from '../components/Layout';
+import { PageHeader } from '../components/ui/PageHeader';
+import { Card } from '../components/ui/Card';
+import { Badge } from '../components/ui/Badge';
+
+const connectionBadgeVariant = (status: string) =>
+  status === 'connected' ? 'success' : status === 'connecting' ? 'warning' : 'danger';
+
+const broadcastBadgeVariant = (status: string) => {
+  switch (status) {
+    case 'completed': return 'success';
+    case 'sending': return 'warning';
+    case 'failed': return 'danger';
+    case 'scheduled': return 'neutral';
+    default: return 'neutral';
+  }
+};
 
 export const WhatsApp = () => {
   const { data: connections, isLoading: loadingConn } = useQuery({
@@ -19,86 +35,71 @@ export const WhatsApp = () => {
   return (
     <Layout>
       <div>
-        <h1 className="text-2xl font-bold text-gray-900 mb-2">WhatsApp Management</h1>
-        <p className="text-sm text-gray-500 mb-6">Monitor connections and broadcast campaigns</p>
+        <PageHeader title="WhatsApp Management" subtitle="Monitor connections and broadcast campaigns" />
 
         {isLoading ? (
           <div className="flex justify-center py-16"><LoadingSpinner /></div>
         ) : (
           <>
             {/* Connections */}
-            <div className="mb-8">
-              <h2 className="text-sm font-semibold text-gray-700 mb-3">Active Connections</h2>
+            <div className="mb-6">
+              <p className="text-xs font-semibold text-ios-secondary-label uppercase tracking-wide mb-1 px-3.5">Active Connections</p>
               {connections && connections.length > 0 ? (
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                   {connections.map((conn: any, i: number) => (
-                    <div key={i} className="bg-white rounded-xl border border-gray-200 p-4">
+                    <Card key={i} className="p-4">
                       <div className="flex items-center justify-between mb-2">
-                        <span className="font-medium text-gray-900 text-sm">{conn.branchName || `Branch ${conn.branchId}`}</span>
-                        <span className={`inline-flex px-2 py-0.5 text-xs font-medium rounded-full ${
-                          conn.status === 'connected' ? 'bg-green-100 text-green-700' :
-                          conn.status === 'connecting' ? 'bg-yellow-100 text-yellow-700' :
-                          'bg-red-100 text-red-700'
-                        }`}>
-                          {conn.status}
-                        </span>
+                        <span className="font-medium text-ios-label text-sm">{conn.branchName || `Branch ${conn.branchId}`}</span>
+                        <Badge variant={connectionBadgeVariant(conn.status)}>{conn.status}</Badge>
                       </div>
-                      {conn.phoneNumber && <p className="text-xs text-gray-500">Phone: {conn.phoneNumber}</p>}
-                      {conn.lastSeen && <p className="text-xs text-gray-400 mt-1">Last seen: {new Date(conn.lastSeen).toLocaleString()}</p>}
-                    </div>
+                      {conn.phoneNumber && <p className="text-xs text-ios-secondary-label">Phone: {conn.phoneNumber}</p>}
+                      {conn.lastSeen && <p className="text-xs text-ios-gray mt-1">Last seen: {new Date(conn.lastSeen).toLocaleString()}</p>}
+                    </Card>
                   ))}
                 </div>
               ) : (
-                <div className="bg-white rounded-xl border border-gray-200 p-8 text-center text-sm text-gray-400">
+                <Card className="p-8 text-center text-sm text-ios-gray">
                   No active WhatsApp connections
-                </div>
+                </Card>
               )}
             </div>
 
             {/* Broadcasts */}
             <div>
-              <h2 className="text-sm font-semibold text-gray-700 mb-3">Recent Broadcasts</h2>
+              <p className="text-xs font-semibold text-ios-secondary-label uppercase tracking-wide mb-1 px-3.5">Recent Broadcasts</p>
               {broadcastData?.broadcasts && broadcastData.broadcasts.length > 0 ? (
-                <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
+                <Card className="overflow-hidden">
                   <table className="w-full text-sm">
-                    <thead className="bg-gray-50 border-b border-gray-200">
+                    <thead>
                       <tr>
-                        <th className="text-left px-4 py-3 font-medium text-gray-500">Name</th>
-                        <th className="text-left px-4 py-3 font-medium text-gray-500">Target</th>
-                        <th className="text-left px-4 py-3 font-medium text-gray-500">Status</th>
-                        <th className="text-right px-4 py-3 font-medium text-gray-500">Sent</th>
-                        <th className="text-right px-4 py-3 font-medium text-gray-500">Failed</th>
-                        <th className="text-left px-4 py-3 font-medium text-gray-500">Date</th>
+                        <th className="text-left px-4 py-3 font-medium text-ios-secondary-label">Name</th>
+                        <th className="text-left px-4 py-3 font-medium text-ios-secondary-label">Target</th>
+                        <th className="text-left px-4 py-3 font-medium text-ios-secondary-label">Status</th>
+                        <th className="text-right px-4 py-3 font-medium text-ios-secondary-label">Sent</th>
+                        <th className="text-right px-4 py-3 font-medium text-ios-secondary-label">Failed</th>
+                        <th className="text-left px-4 py-3 font-medium text-ios-secondary-label">Date</th>
                       </tr>
                     </thead>
-                    <tbody className="divide-y divide-gray-100">
+                    <tbody className="divide-y divide-ios-gray5">
                       {broadcastData.broadcasts.map((bc: any) => (
-                        <tr key={bc.id} className="hover:bg-gray-50">
-                          <td className="px-4 py-3 font-medium text-gray-900">{bc.name}</td>
-                          <td className="px-4 py-3 text-gray-600">{bc.targetType} ({bc.recipientCount})</td>
+                        <tr key={bc.id} className="hover:bg-ios-gray6">
+                          <td className="px-4 py-3 font-medium text-ios-label">{bc.name}</td>
+                          <td className="px-4 py-3 text-ios-secondary-label">{bc.targetType} ({bc.recipientCount})</td>
                           <td className="px-4 py-3">
-                            <span className={`inline-flex px-2 py-0.5 text-xs font-medium rounded-full ${
-                              bc.status === 'completed' ? 'bg-green-100 text-green-700' :
-                              bc.status === 'sending' ? 'bg-blue-100 text-blue-700' :
-                              bc.status === 'failed' ? 'bg-red-100 text-red-700' :
-                              bc.status === 'scheduled' ? 'bg-purple-100 text-purple-700' :
-                              'bg-gray-100 text-gray-600'
-                            }`}>
-                              {bc.status}
-                            </span>
+                            <Badge variant={broadcastBadgeVariant(bc.status)}>{bc.status}</Badge>
                           </td>
-                          <td className="px-4 py-3 text-right text-gray-700">{bc.sentCount}</td>
-                          <td className="px-4 py-3 text-right text-gray-500">{bc.failedCount}</td>
-                          <td className="px-4 py-3 text-gray-500">{new Date(bc.createdAt).toLocaleDateString()}</td>
+                          <td className="px-4 py-3 text-right text-ios-label">{bc.sentCount}</td>
+                          <td className="px-4 py-3 text-right text-ios-secondary-label">{bc.failedCount}</td>
+                          <td className="px-4 py-3 text-ios-secondary-label">{new Date(bc.createdAt).toLocaleDateString()}</td>
                         </tr>
                       ))}
                     </tbody>
                   </table>
-                </div>
+                </Card>
               ) : (
-                <div className="bg-white rounded-xl border border-gray-200 p-8 text-center text-sm text-gray-400">
+                <Card className="p-8 text-center text-sm text-ios-gray">
                   No broadcasts found
-                </div>
+                </Card>
               )}
             </div>
           </>

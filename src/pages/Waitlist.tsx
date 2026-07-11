@@ -1,8 +1,15 @@
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { User } from 'lucide-react';
 import { waitlistService } from '../services/superAdminService';
 import { LoadingSpinner } from '../components/LoadingSpinner';
 import { Layout } from '../components/Layout';
+import { PageHeader } from '../components/ui/PageHeader';
+import { ListGroup, ListRow } from '../components/ui/ListGroup';
+import { Badge } from '../components/ui/Badge';
+import { Button } from '../components/ui/Button';
+import { Card } from '../components/ui/Card';
+import { iosInputCls } from '../components/ui/FormField';
 import toast from 'react-hot-toast';
 import type { WaitlistEntry } from '../types';
 
@@ -41,31 +48,30 @@ export const Waitlist = () => {
   });
 
   const stats = [
-    { label: 'Total Signups', value: totalCount ?? 0, color: 'bg-blue-50 text-blue-700' },
-    { label: 'Customers', value: customerCount ?? 0, color: 'bg-green-50 text-green-700' },
-    { label: 'Vendors', value: vendorCount ?? 0, color: 'bg-purple-50 text-purple-700' },
+    { label: 'Total Signups', value: totalCount ?? 0 },
+    { label: 'Customers', value: customerCount ?? 0 },
+    { label: 'Vendors', value: vendorCount ?? 0 },
   ];
 
   return (
     <Layout>
       <div>
-        <h1 className="text-2xl font-bold text-gray-900 mb-2">Waitlist</h1>
-        <p className="text-sm text-gray-500 mb-6">People who signed up for early access</p>
+        <PageHeader title="Waitlist" subtitle="People who signed up for early access" />
 
-        <div className="grid grid-cols-3 gap-4 mb-6">
+        <div className="grid grid-cols-3 gap-4 mb-4">
           {stats.map((s) => (
-            <div key={s.label} className="bg-white rounded-xl border border-gray-200 p-4">
-              <p className="text-xs font-medium text-gray-500 uppercase tracking-wide">{s.label}</p>
-              <p className="text-2xl font-bold text-gray-900 mt-1">{s.value}</p>
-            </div>
+            <Card key={s.label} className="p-4">
+              <p className="text-xs font-medium text-ios-secondary-label uppercase tracking-wide">{s.label}</p>
+              <p className="text-2xl font-bold text-ios-label mt-1">{s.value}</p>
+            </Card>
           ))}
         </div>
 
-        <div className="flex gap-3 mb-4">
+        <div className="mb-3">
           <select
             value={typeFilter}
             onChange={(e) => setTypeFilter(e.target.value)}
-            className="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-gray-900"
+            className={`max-w-xs ${iosInputCls}`}
           >
             <option value="">All Types</option>
             <option value="customer">Customers</option>
@@ -76,52 +82,39 @@ export const Waitlist = () => {
         {isLoading ? (
           <div className="flex justify-center py-16"><LoadingSpinner /></div>
         ) : (
-          <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
-            <table className="w-full text-sm">
-              <thead className="bg-gray-50 border-b border-gray-200">
-                <tr>
-                  <th className="text-left px-4 py-3 font-medium text-gray-500">Name</th>
-                  <th className="text-left px-4 py-3 font-medium text-gray-500">Email</th>
-                  <th className="text-left px-4 py-3 font-medium text-gray-500">Phone</th>
-                  <th className="text-left px-4 py-3 font-medium text-gray-500">Type</th>
-                  <th className="text-left px-4 py-3 font-medium text-gray-500">Location</th>
-                  <th className="text-left px-4 py-3 font-medium text-gray-500">Source</th>
-                  <th className="text-left px-4 py-3 font-medium text-gray-500">Date</th>
-                  <th className="text-right px-4 py-3 font-medium text-gray-500">Actions</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-100">
-                {entries?.map((entry: WaitlistEntry) => (
-                  <tr key={entry.id} className="hover:bg-gray-50">
-                    <td className="px-4 py-3 font-medium text-gray-900">{entry.name || '-'}</td>
-                    <td className="px-4 py-3 text-gray-600">{entry.email}</td>
-                    <td className="px-4 py-3 text-gray-600">{entry.phone || '-'}</td>
-                    <td className="px-4 py-3">
-                      <span className={`inline-flex px-2 py-0.5 text-xs font-medium rounded-full ${
-                        entry.userType === 'vendor' ? 'bg-purple-100 text-purple-700' : 'bg-green-100 text-green-700'
-                      }`}>
-                        {entry.userType}
-                      </span>
-                    </td>
-                    <td className="px-4 py-3 text-gray-600">{[entry.city, entry.country].filter(Boolean).join(', ') || '-'}</td>
-                    <td className="px-4 py-3 text-gray-500">{entry.referralSource || '-'}</td>
-                    <td className="px-4 py-3 text-gray-500">{new Date(entry.createdAt).toLocaleDateString()}</td>
-                    <td className="px-4 py-3 text-right">
-                      <button
-                        onClick={() => { if (window.confirm('Remove this entry?')) deleteMutation.mutate(entry.id); }}
-                        className="text-sm text-red-600 hover:text-red-800"
-                      >
-                        Remove
-                      </button>
-                    </td>
-                  </tr>
-                ))}
-                {(!entries || entries.length === 0) && (
-                  <tr><td colSpan={8} className="px-4 py-12 text-center text-gray-400">No waitlist entries found</td></tr>
-                )}
-              </tbody>
-            </table>
-          </div>
+          <ListGroup>
+            {entries?.map((entry: WaitlistEntry) => (
+              <ListRow
+                key={entry.id}
+                leading={
+                  <div className="w-10 h-10 rounded-xl bg-brand/15 flex items-center justify-center">
+                    <User className="w-5 h-5 text-brand-hover" />
+                  </div>
+                }
+                title={entry.name || '-'}
+                subtitle={[entry.email, entry.phone].filter(Boolean).join(' · ')}
+                trailing={
+                  <>
+                    <div className="text-right hidden sm:block">
+                      <p className="text-xs text-ios-secondary-label">{[entry.city, entry.country].filter(Boolean).join(', ') || '-'}</p>
+                      <p className="text-xs text-ios-gray">{new Date(entry.createdAt).toLocaleDateString()}</p>
+                    </div>
+                    <Badge variant={entry.userType === 'customer' ? 'success' : 'neutral'}>{entry.userType}</Badge>
+                    <Button
+                      size="sm"
+                      variant="destructive"
+                      onClick={() => { if (window.confirm('Remove this entry?')) deleteMutation.mutate(entry.id); }}
+                    >
+                      Remove
+                    </Button>
+                  </>
+                }
+              />
+            ))}
+            {(!entries || entries.length === 0) && (
+              <div className="px-4 py-12 text-center text-ios-gray">No waitlist entries found</div>
+            )}
+          </ListGroup>
         )}
       </div>
     </Layout>

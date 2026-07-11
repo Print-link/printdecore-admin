@@ -1,9 +1,16 @@
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { MoreVertical, Tag } from 'lucide-react';
 import { discountService, waitlistService, clientService } from '../services/superAdminService';
 import { LoadingSpinner } from '../components/LoadingSpinner';
 import { Layout } from '../components/Layout';
 import { Modal } from '../components/Modal';
+import { PageHeader } from '../components/ui/PageHeader';
+import { ListGroup, ListRow } from '../components/ui/ListGroup';
+import { Badge } from '../components/ui/Badge';
+import { Button } from '../components/ui/Button';
+import { Switch } from '../components/ui/Switch';
+import { FormField, iosInputCls } from '../components/ui/FormField';
 import toast from 'react-hot-toast';
 import type { Discount } from '../types';
 
@@ -11,7 +18,22 @@ export const Discounts = () => {
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [editingDiscount, setEditingDiscount] = useState<Discount | null>(null);
   const [assigningDiscount, setAssigningDiscount] = useState<Discount | null>(null);
+  const [openMenuId, setOpenMenuId] = useState<string | null>(null);
+  const dropdownRefs = useRef<{ [key: string]: HTMLDivElement | null }>({});
   const queryClient = useQueryClient();
+
+  useEffect(() => {
+    if (!openMenuId) return;
+    const handleClickOutside = (event: MouseEvent) => {
+      const target = event.target as Node;
+      for (const ref of Object.values(dropdownRefs.current)) {
+        if (ref && ref.contains(target)) return;
+      }
+      setOpenMenuId(null);
+    };
+    document.addEventListener('mousedown', handleClickOutside, true);
+    return () => document.removeEventListener('mousedown', handleClickOutside, true);
+  }, [openMenuId]);
 
   const { data: discounts, isLoading } = useQuery({
     queryKey: ['discounts'],
@@ -79,158 +101,130 @@ export const Discounts = () => {
     });
   };
 
-  const inputCls = "w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-gray-900";
-
   return (
     <Layout>
       <div>
-        <div className="flex items-center justify-between mb-6">
-          <div>
-            <h1 className="text-2xl font-bold text-gray-900">Discounts & Promos</h1>
-            <p className="text-sm text-gray-500 mt-1">Create and manage discount codes for customers and waitlist</p>
-          </div>
-          <button onClick={() => setIsCreateOpen(true)} className="px-4 py-2 bg-gray-900 text-white text-sm font-medium rounded-lg hover:bg-gray-800">
-            Create Discount
-          </button>
-        </div>
+        <PageHeader
+          title="Discounts & Promos"
+          subtitle="Create and manage discount codes for customers and waitlist"
+          actions={<Button size="sm" onClick={() => setIsCreateOpen(true)}>Create Discount</Button>}
+        />
 
         {isLoading ? (
           <div className="flex justify-center py-16"><LoadingSpinner /></div>
         ) : (
-          <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
-            <table className="w-full text-sm">
-              <thead className="bg-gray-50 border-b border-gray-200">
-                <tr>
-                  <th className="text-left px-4 py-3 font-medium text-gray-500">Code</th>
-                  <th className="text-left px-4 py-3 font-medium text-gray-500">Name</th>
-                  <th className="text-left px-4 py-3 font-medium text-gray-500">Type</th>
-                  <th className="text-left px-4 py-3 font-medium text-gray-500">Value</th>
-                  <th className="text-left px-4 py-3 font-medium text-gray-500">Target</th>
-                  <th className="text-left px-4 py-3 font-medium text-gray-500">Usage</th>
-                  <th className="text-left px-4 py-3 font-medium text-gray-500">Expires</th>
-                  <th className="text-left px-4 py-3 font-medium text-gray-500">Status</th>
-                  <th className="text-right px-4 py-3 font-medium text-gray-500">Actions</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-100">
-                {discounts?.map((d) => (
-                  <tr key={d.id} className="hover:bg-gray-50">
-                    <td className="px-4 py-3 font-mono text-xs font-bold text-gray-900">{d.code}</td>
-                    <td className="px-4 py-3 font-medium text-gray-900">{d.name}</td>
-                    <td className="px-4 py-3">
-                      <span className={`inline-flex px-2 py-0.5 text-xs font-medium rounded-full ${d.discountType === 'percentage' ? 'bg-blue-100 text-blue-700' : 'bg-green-100 text-green-700'}`}>
-                        {d.discountType}
-                      </span>
-                    </td>
-                    <td className="px-4 py-3 font-medium">{d.discountType === 'percentage' ? `${d.discountValue}%` : `${d.currency} ${d.discountValue}`}</td>
-                    <td className="px-4 py-3">
-                      <span className="inline-flex px-2 py-0.5 text-xs font-medium rounded-full bg-gray-100 text-gray-600">{d.targetType}</span>
-                    </td>
-                    <td className="px-4 py-3 text-gray-600">{d.currentUses}{d.maxUses != null ? `/${d.maxUses}` : ''}</td>
-                    <td className="px-4 py-3 text-gray-500">{d.expiresAt ? new Date(d.expiresAt).toLocaleDateString() : 'Never'}</td>
-                    <td className="px-4 py-3">
-                      <button
-                        onClick={() => toggleMutation.mutate({ id: d.id, isActive: !d.isActive })}
-                        className={`inline-flex px-2 py-0.5 text-xs font-medium rounded-full cursor-pointer ${d.isActive ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}
-                      >
-                        {d.isActive ? 'Active' : 'Inactive'}
-                      </button>
-                    </td>
-                    <td className="px-4 py-3 text-right">
-                      <div className="flex items-center justify-end gap-2">
-                        <button onClick={() => setAssigningDiscount(d)} className="text-xs text-blue-600 hover:text-blue-800">Assign</button>
-                        <button onClick={() => setEditingDiscount(d)} className="text-xs text-gray-600 hover:text-gray-900">Edit</button>
-                        <button onClick={() => { if (window.confirm('Delete this discount?')) deleteMutation.mutate(d.id); }} className="text-xs text-red-600 hover:text-red-800">Delete</button>
+          <ListGroup>
+            {discounts?.map((d) => {
+              const valueLabel = d.discountType === 'percentage' ? `${d.discountValue}%` : `${d.currency} ${d.discountValue}`;
+              const usesLabel = `${d.currentUses}${d.maxUses != null ? `/${d.maxUses}` : ''} uses`;
+              const expiryLabel = d.expiresAt ? `Expires ${new Date(d.expiresAt).toLocaleDateString()}` : 'No expiry';
+              return (
+                <ListRow
+                  key={d.id}
+                  leading={
+                    <div className="w-10 h-10 rounded-xl bg-brand/15 flex items-center justify-center">
+                      <Tag className="w-5 h-5 text-brand-hover" />
+                    </div>
+                  }
+                  title={`${d.name} · ${d.code}`}
+                  subtitle={`${valueLabel} · ${d.targetType} · ${usesLabel} · ${expiryLabel}`}
+                  trailing={
+                    <>
+                      <Switch checked={d.isActive} onChange={() => toggleMutation.mutate({ id: d.id, isActive: !d.isActive })} />
+                      <div className="relative" ref={(el) => { dropdownRefs.current[d.id] = el; }} onClick={(e) => e.stopPropagation()}>
+                        <button
+                          onClick={() => setOpenMenuId(openMenuId === d.id ? null : d.id)}
+                          className="p-1.5 rounded-full text-ios-gray hover:bg-ios-gray6"
+                          type="button"
+                          aria-label="More actions"
+                        >
+                          <MoreVertical className="w-4 h-4" />
+                        </button>
+                        {openMenuId === d.id && (
+                          <div className="absolute right-0 mt-1 w-32 bg-white rounded-ios shadow-ios border border-ios-gray5 py-1 z-10">
+                            <button onClick={() => { setAssigningDiscount(d); setOpenMenuId(null); }} className="w-full text-left px-3 py-1.5 text-sm text-ios-label hover:bg-ios-gray6">Assign</button>
+                            <button onClick={() => { setEditingDiscount(d); setOpenMenuId(null); }} className="w-full text-left px-3 py-1.5 text-sm text-ios-label hover:bg-ios-gray6">Edit</button>
+                            <button onClick={() => { if (window.confirm('Delete this discount?')) deleteMutation.mutate(d.id); setOpenMenuId(null); }} className="w-full text-left px-3 py-1.5 text-sm text-ios-red hover:bg-ios-red/10">Delete</button>
+                          </div>
+                        )}
                       </div>
-                    </td>
-                  </tr>
-                ))}
-                {(!discounts || discounts.length === 0) && (
-                  <tr><td colSpan={9} className="px-4 py-12 text-center text-gray-400">No discounts created yet</td></tr>
-                )}
-              </tbody>
-            </table>
-          </div>
+                    </>
+                  }
+                />
+              );
+            })}
+            {(!discounts || discounts.length === 0) && (
+              <div className="px-4 py-12 text-center text-ios-gray">No discounts created yet</div>
+            )}
+          </ListGroup>
         )}
 
         {/* Create Modal */}
         <Modal isOpen={isCreateOpen} onClose={() => setIsCreateOpen(false)} title="Create Discount" size="large">
           <form onSubmit={handleCreate} className="space-y-4">
             <div className="grid grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Code</label>
-                <input type="text" name="code" required placeholder="WELCOME10" className={inputCls} style={{ textTransform: 'uppercase' }} />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Name</label>
-                <input type="text" name="name" required placeholder="Welcome Discount" className={inputCls} />
-              </div>
+              <FormField label="Code">
+                <input type="text" name="code" required placeholder="WELCOME10" className={iosInputCls} style={{ textTransform: 'uppercase' }} />
+              </FormField>
+              <FormField label="Name">
+                <input type="text" name="name" required placeholder="Welcome Discount" className={iosInputCls} />
+              </FormField>
             </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Description</label>
-              <input type="text" name="description" placeholder="Optional description" className={inputCls} />
-            </div>
+            <FormField label="Description">
+              <input type="text" name="description" placeholder="Optional description" className={iosInputCls} />
+            </FormField>
             <div className="grid grid-cols-3 gap-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Type</label>
-                <select name="discountType" required className={inputCls}>
+              <FormField label="Type">
+                <select name="discountType" required className={iosInputCls}>
                   <option value="percentage">Percentage (%)</option>
                   <option value="fixed">Fixed Amount</option>
                 </select>
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Value</label>
-                <input type="number" name="discountValue" required step="0.01" min="0.01" placeholder="10" className={inputCls} />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Currency</label>
-                <select name="currency" className={inputCls}>
+              </FormField>
+              <FormField label="Value">
+                <input type="number" name="discountValue" required step="0.01" min="0.01" placeholder="10" className={iosInputCls} />
+              </FormField>
+              <FormField label="Currency">
+                <select name="currency" className={iosInputCls}>
                   <option value="GHS">GHS</option>
                   <option value="NGN">NGN</option>
                   <option value="USD">USD</option>
                 </select>
-              </div>
+              </FormField>
             </div>
             <div className="grid grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Target</label>
-                <select name="targetType" className={inputCls}>
+              <FormField label="Target">
+                <select name="targetType" className={iosInputCls}>
                   <option value="all">Everyone</option>
                   <option value="customer">Specific Customers</option>
                   <option value="waitlist">Waitlist Only</option>
                   <option value="branch">Specific Branch</option>
                 </select>
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Expires At</label>
-                <input type="datetime-local" name="expiresAt" className={inputCls} />
-              </div>
+              </FormField>
+              <FormField label="Expires At">
+                <input type="datetime-local" name="expiresAt" className={iosInputCls} />
+              </FormField>
             </div>
             <div className="grid grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Max Total Uses</label>
-                <input type="number" name="maxUses" min="1" placeholder="Unlimited" className={inputCls} />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Max Per Customer</label>
-                <input type="number" name="maxUsesPerCustomer" min="1" defaultValue="1" className={inputCls} />
-              </div>
+              <FormField label="Max Total Uses">
+                <input type="number" name="maxUses" min="1" placeholder="Unlimited" className={iosInputCls} />
+              </FormField>
+              <FormField label="Max Per Customer">
+                <input type="number" name="maxUsesPerCustomer" min="1" defaultValue="1" className={iosInputCls} />
+              </FormField>
             </div>
             <div className="grid grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Min Order Amount</label>
-                <input type="number" name="minOrderAmount" step="0.01" min="0" placeholder="No minimum" className={inputCls} />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Max Discount Amount</label>
-                <input type="number" name="maxDiscountAmount" step="0.01" min="0" placeholder="No cap" className={inputCls} />
-              </div>
+              <FormField label="Min Order Amount">
+                <input type="number" name="minOrderAmount" step="0.01" min="0" placeholder="No minimum" className={iosInputCls} />
+              </FormField>
+              <FormField label="Max Discount Amount">
+                <input type="number" name="maxDiscountAmount" step="0.01" min="0" placeholder="No cap" className={iosInputCls} />
+              </FormField>
             </div>
             <div className="flex justify-end gap-3 pt-2">
-              <button type="button" onClick={() => setIsCreateOpen(false)} className="px-4 py-2 text-sm font-medium text-gray-700 border border-gray-300 rounded-lg hover:bg-gray-50">Cancel</button>
-              <button type="submit" disabled={createMutation.isPending} className="px-4 py-2 text-sm font-medium text-white bg-gray-900 rounded-lg hover:bg-gray-800 disabled:opacity-50">
+              <Button type="button" variant="secondary" onClick={() => setIsCreateOpen(false)}>Cancel</Button>
+              <Button type="submit" disabled={createMutation.isPending}>
                 {createMutation.isPending ? 'Creating...' : 'Create Discount'}
-              </button>
+              </Button>
             </div>
           </form>
         </Modal>
@@ -239,49 +233,41 @@ export const Discounts = () => {
         <Modal isOpen={!!editingDiscount} onClose={() => setEditingDiscount(null)} title={`Edit ${editingDiscount?.code || ''}`} size="large">
           {editingDiscount && (
             <form onSubmit={handleEdit} className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Name</label>
-                <input type="text" name="name" defaultValue={editingDiscount.name} required className={inputCls} />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Description</label>
-                <input type="text" name="description" defaultValue={editingDiscount.description} className={inputCls} />
+              <FormField label="Name">
+                <input type="text" name="name" defaultValue={editingDiscount.name} required className={iosInputCls} />
+              </FormField>
+              <FormField label="Description">
+                <input type="text" name="description" defaultValue={editingDiscount.description} className={iosInputCls} />
+              </FormField>
+              <div className="grid grid-cols-2 gap-4">
+                <FormField label="Value">
+                  <input type="number" name="discountValue" defaultValue={editingDiscount.discountValue} step="0.01" min="0.01" className={iosInputCls} />
+                </FormField>
+                <FormField label="Expires At">
+                  <input type="datetime-local" name="expiresAt" defaultValue={editingDiscount.expiresAt?.slice(0, 16)} className={iosInputCls} />
+                </FormField>
               </div>
               <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Value</label>
-                  <input type="number" name="discountValue" defaultValue={editingDiscount.discountValue} step="0.01" min="0.01" className={inputCls} />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Expires At</label>
-                  <input type="datetime-local" name="expiresAt" defaultValue={editingDiscount.expiresAt?.slice(0, 16)} className={inputCls} />
-                </div>
+                <FormField label="Max Total Uses">
+                  <input type="number" name="maxUses" defaultValue={editingDiscount.maxUses} min="1" placeholder="Unlimited" className={iosInputCls} />
+                </FormField>
+                <FormField label="Max Per Customer">
+                  <input type="number" name="maxUsesPerCustomer" defaultValue={editingDiscount.maxUsesPerCustomer} min="1" className={iosInputCls} />
+                </FormField>
               </div>
               <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Max Total Uses</label>
-                  <input type="number" name="maxUses" defaultValue={editingDiscount.maxUses} min="1" placeholder="Unlimited" className={inputCls} />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Max Per Customer</label>
-                  <input type="number" name="maxUsesPerCustomer" defaultValue={editingDiscount.maxUsesPerCustomer} min="1" className={inputCls} />
-                </div>
-              </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Min Order Amount</label>
-                  <input type="number" name="minOrderAmount" defaultValue={editingDiscount.minOrderAmount} step="0.01" min="0" className={inputCls} />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Max Discount Amount</label>
-                  <input type="number" name="maxDiscountAmount" defaultValue={editingDiscount.maxDiscountAmount} step="0.01" min="0" className={inputCls} />
-                </div>
+                <FormField label="Min Order Amount">
+                  <input type="number" name="minOrderAmount" defaultValue={editingDiscount.minOrderAmount} step="0.01" min="0" className={iosInputCls} />
+                </FormField>
+                <FormField label="Max Discount Amount">
+                  <input type="number" name="maxDiscountAmount" defaultValue={editingDiscount.maxDiscountAmount} step="0.01" min="0" className={iosInputCls} />
+                </FormField>
               </div>
               <div className="flex justify-end gap-3 pt-2">
-                <button type="button" onClick={() => setEditingDiscount(null)} className="px-4 py-2 text-sm font-medium text-gray-700 border border-gray-300 rounded-lg hover:bg-gray-50">Cancel</button>
-                <button type="submit" disabled={updateMutation.isPending} className="px-4 py-2 text-sm font-medium text-white bg-gray-900 rounded-lg hover:bg-gray-800 disabled:opacity-50">
+                <Button type="button" variant="secondary" onClick={() => setEditingDiscount(null)}>Cancel</Button>
+                <Button type="submit" disabled={updateMutation.isPending}>
                   {updateMutation.isPending ? 'Saving...' : 'Save Changes'}
-                </button>
+                </Button>
               </div>
             </form>
           )}
@@ -345,78 +331,86 @@ function AssignModal({ discount, onClose }: { discount: Discount | null; onClose
     });
   };
 
+  const waitlistIds = waitlistEntries?.map(w => w.id) || [];
+  const clientIds = clientsData?.clients?.map((c: any) => c._id || c.id) || [];
+  const currentIds = tab === 'waitlist' ? waitlistIds : clientIds;
+
   return (
     <Modal isOpen={!!discount} onClose={onClose} title={`Assign ${discount?.code || ''}`} size="large">
       <div>
         <div className="flex gap-2 mb-4">
-          <button onClick={() => { setTab('waitlist'); setSelected(new Set()); }} className={`px-3 py-1.5 text-sm rounded-lg font-medium ${tab === 'waitlist' ? 'bg-gray-900 text-white' : 'bg-gray-100 text-gray-600'}`}>Waitlist</button>
-          <button onClick={() => { setTab('customers'); setSelected(new Set()); }} className={`px-3 py-1.5 text-sm rounded-lg font-medium ${tab === 'customers' ? 'bg-gray-900 text-white' : 'bg-gray-100 text-gray-600'}`}>Customers</button>
+          <button
+            onClick={() => { setTab('waitlist'); setSelected(new Set()); }}
+            className={`px-3 py-1.5 text-sm rounded-full font-medium ${tab === 'waitlist' ? 'bg-brand text-ios-label' : 'bg-ios-gray6 text-ios-secondary-label'}`}
+          >
+            Waitlist
+          </button>
+          <button
+            onClick={() => { setTab('customers'); setSelected(new Set()); }}
+            className={`px-3 py-1.5 text-sm rounded-full font-medium ${tab === 'customers' ? 'bg-brand text-ios-label' : 'bg-ios-gray6 text-ios-secondary-label'}`}
+          >
+            Customers
+          </button>
         </div>
 
-        <div className="max-h-64 overflow-y-auto border border-gray-200 rounded-lg">
+        <div className="flex items-center gap-2 px-3.5 py-1 mb-1">
+          <input
+            type="checkbox"
+            className="accent-amber-500"
+            onChange={() => selectAll(currentIds)}
+            checked={selected.size > 0 && selected.size === currentIds.length}
+          />
+          <span className="text-xs text-ios-secondary-label">Select all</span>
+        </div>
+
+        <div className="max-h-64 overflow-y-auto bg-white rounded-ios shadow-ios divide-y divide-ios-gray5">
           {tab === 'waitlist' ? (
-            <table className="w-full text-sm">
-              <thead className="bg-gray-50 sticky top-0">
-                <tr>
-                  <th className="text-left px-3 py-2">
-                    <input type="checkbox" onChange={() => selectAll(waitlistEntries?.map(w => w.id) || [])} checked={selected.size > 0 && selected.size === waitlistEntries?.length} />
-                  </th>
-                  <th className="text-left px-3 py-2 text-xs font-medium text-gray-500">Name</th>
-                  <th className="text-left px-3 py-2 text-xs font-medium text-gray-500">Email</th>
-                  <th className="text-left px-3 py-2 text-xs font-medium text-gray-500">Type</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-100">
-                {waitlistEntries?.map(w => (
-                  <tr key={w.id} className="hover:bg-gray-50 cursor-pointer" onClick={() => toggle(w.id)}>
-                    <td className="px-3 py-2"><input type="checkbox" checked={selected.has(w.id)} readOnly /></td>
-                    <td className="px-3 py-2">{w.name || '-'}</td>
-                    <td className="px-3 py-2 text-gray-600">{w.email}</td>
-                    <td className="px-3 py-2">
-                      <span className={`text-xs px-1.5 py-0.5 rounded-full font-medium ${w.userType === 'vendor' ? 'bg-purple-100 text-purple-700' : 'bg-green-100 text-green-700'}`}>{w.userType}</span>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+            <>
+              {waitlistEntries?.map(w => (
+                <ListRow
+                  key={w.id}
+                  onClick={() => toggle(w.id)}
+                  leading={<input type="checkbox" className="accent-amber-500" checked={selected.has(w.id)} readOnly />}
+                  title={w.name || '-'}
+                  subtitle={w.email}
+                  trailing={<Badge variant={w.userType === 'customer' ? 'success' : 'neutral'}>{w.userType}</Badge>}
+                />
+              ))}
+              {waitlistEntries?.length === 0 && (
+                <div className="px-4 py-8 text-center text-ios-gray text-sm">No waitlist entries</div>
+              )}
+            </>
           ) : (
-            <table className="w-full text-sm">
-              <thead className="bg-gray-50 sticky top-0">
-                <tr>
-                  <th className="text-left px-3 py-2">
-                    <input type="checkbox" onChange={() => selectAll(clientsData?.clients?.map((c: any) => c._id || c.id) || [])} checked={selected.size > 0 && selected.size === clientsData?.clients?.length} />
-                  </th>
-                  <th className="text-left px-3 py-2 text-xs font-medium text-gray-500">Name</th>
-                  <th className="text-left px-3 py-2 text-xs font-medium text-gray-500">Email</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-100">
-                {clientsData?.clients?.map((c: any) => {
-                  const id = c._id || c.id;
-                  return (
-                    <tr key={id} className="hover:bg-gray-50 cursor-pointer" onClick={() => toggle(id)}>
-                      <td className="px-3 py-2"><input type="checkbox" checked={selected.has(id)} readOnly /></td>
-                      <td className="px-3 py-2">{c.fullName || `${c.firstName || ''} ${c.lastName || ''}`.trim() || '-'}</td>
-                      <td className="px-3 py-2 text-gray-600">{c.email}</td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
+            <>
+              {clientsData?.clients?.map((c: any) => {
+                const id = c._id || c.id;
+                return (
+                  <ListRow
+                    key={id}
+                    onClick={() => toggle(id)}
+                    leading={<input type="checkbox" className="accent-amber-500" checked={selected.has(id)} readOnly />}
+                    title={c.fullName || `${c.firstName || ''} ${c.lastName || ''}`.trim() || '-'}
+                    subtitle={c.email}
+                  />
+                );
+              })}
+              {clientsData?.clients?.length === 0 && (
+                <div className="px-4 py-8 text-center text-ios-gray text-sm">No customers found</div>
+              )}
+            </>
           )}
         </div>
 
         <div className="flex items-center justify-between mt-4">
-          <p className="text-sm text-gray-500">{selected.size} selected</p>
+          <p className="text-sm text-ios-secondary-label">{selected.size} selected</p>
           <div className="flex gap-3">
-            <button onClick={onClose} className="px-4 py-2 text-sm font-medium text-gray-700 border border-gray-300 rounded-lg hover:bg-gray-50">Cancel</button>
-            <button
+            <Button variant="secondary" onClick={onClose}>Cancel</Button>
+            <Button
               onClick={() => assignMutation.mutate()}
               disabled={selected.size === 0 || assignMutation.isPending}
-              className="px-4 py-2 text-sm font-medium text-white bg-gray-900 rounded-lg hover:bg-gray-800 disabled:opacity-50"
             >
               {assignMutation.isPending ? 'Assigning...' : `Assign to ${selected.size}`}
-            </button>
+            </Button>
           </div>
         </div>
       </div>

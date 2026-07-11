@@ -4,6 +4,11 @@ import { billingService } from '../services/superAdminService';
 import { LoadingSpinner } from '../components/LoadingSpinner';
 import { Layout } from '../components/Layout';
 import { Modal } from '../components/Modal';
+import { PageHeader } from '../components/ui/PageHeader';
+import { Card } from '../components/ui/Card';
+import { Badge } from '../components/ui/Badge';
+import { Button } from '../components/ui/Button';
+import { FormField, iosInputCls } from '../components/ui/FormField';
 import toast from 'react-hot-toast';
 import type { Plan } from '../types';
 
@@ -41,54 +46,49 @@ export const Billing = () => {
     });
   };
 
-  const inputCls = "w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-gray-900";
-
   return (
     <Layout>
       <div>
-        <h1 className="text-2xl font-bold text-gray-900 mb-2">Billing & Plans</h1>
-        <p className="text-sm text-gray-500 mb-6">Manage subscription plans and pricing</p>
+        <PageHeader title="Billing & Plans" subtitle="Manage subscription plans and pricing" />
 
         {isLoading ? (
           <div className="flex justify-center py-16"><LoadingSpinner /></div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-5">
             {plans?.map((plan) => (
-              <div key={plan.id} className="bg-white rounded-xl border border-gray-200 p-5 flex flex-col">
+              <Card key={plan.id} className="p-5 flex flex-col">
                 <div className="flex items-center justify-between mb-3">
-                  <h3 className="text-lg font-bold text-gray-900">{plan.name}</h3>
-                  <span className={`inline-flex px-2 py-0.5 text-xs font-medium rounded-full ${plan.isActive ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500'}`}>
-                    {plan.isActive ? 'Active' : 'Inactive'}
-                  </span>
+                  <h3 className="text-lg font-bold text-ios-label">{plan.name}</h3>
+                  <Badge variant={plan.isActive ? 'success' : 'neutral'}>{plan.isActive ? 'Active' : 'Inactive'}</Badge>
                 </div>
 
-                {plan.description && <p className="text-sm text-gray-500 mb-4">{plan.description}</p>}
+                {plan.description && <p className="text-sm text-ios-secondary-label mb-4">{plan.description}</p>}
 
                 <div className="space-y-1 text-sm mb-4">
-                  <div className="flex justify-between"><span className="text-gray-500">Monthly</span><span className="font-semibold text-gray-900">{plan.currency} {plan.monthlyPrice}</span></div>
-                  <div className="flex justify-between"><span className="text-gray-500">Yearly</span><span className="font-semibold text-gray-900">{plan.currency} {plan.yearlyPrice}</span></div>
-                  <div className="flex justify-between"><span className="text-gray-500">Commission</span><span className="font-medium">{plan.commissionPercent}%</span></div>
+                  <div className="flex justify-between"><span className="text-ios-secondary-label">Monthly</span><span className="font-semibold text-ios-label">{plan.currency} {plan.monthlyPrice}</span></div>
+                  <div className="flex justify-between"><span className="text-ios-secondary-label">Yearly</span><span className="font-semibold text-ios-label">{plan.currency} {plan.yearlyPrice}</span></div>
+                  <div className="flex justify-between"><span className="text-ios-secondary-label">Commission</span><span className="font-medium text-ios-label">{plan.commissionPercent}%</span></div>
                 </div>
 
-                <div className="border-t border-gray-100 pt-3 space-y-1.5 text-xs text-gray-600 flex-1">
+                <div className="border-t border-ios-gray5 pt-3 space-y-1.5 text-xs text-ios-secondary-label flex-1">
                   <p>Branches: {plan.maxBranches === -1 ? 'Unlimited' : plan.maxBranches}</p>
                   <p>Clerks: {plan.maxClerks === -1 ? 'Unlimited' : plan.maxClerks}</p>
                   <p>Orders/mo: {plan.maxOrdersPerMonth === -1 ? 'Unlimited' : plan.maxOrdersPerMonth}</p>
                   <p>Services: {plan.maxServices === -1 ? 'Unlimited' : plan.maxServices}</p>
                   <div className="flex flex-wrap gap-1.5 pt-2">
-                    {plan.hasWhatsapp && <Badge label="WhatsApp" />}
-                    {plan.hasWhatsappBroadcast && <Badge label="Broadcast" />}
-                    {plan.hasWhatsappLabels && <Badge label="Labels" />}
-                    {plan.hasAnalytics && <Badge label="Analytics" />}
-                    {plan.hasCrm && <Badge label="CRM" />}
-                    {plan.hasCustomRoles && <Badge label="Custom Roles" />}
+                    {plan.hasWhatsapp && <Badge variant="neutral">WhatsApp</Badge>}
+                    {plan.hasWhatsappBroadcast && <Badge variant="neutral">Broadcast</Badge>}
+                    {plan.hasWhatsappLabels && <Badge variant="neutral">Labels</Badge>}
+                    {plan.hasAnalytics && <Badge variant="neutral">Analytics</Badge>}
+                    {plan.hasCrm && <Badge variant="neutral">CRM</Badge>}
+                    {plan.hasCustomRoles && <Badge variant="neutral">Custom Roles</Badge>}
                   </div>
                 </div>
 
-                <button onClick={() => setEditingPlan(plan)} className="mt-4 w-full py-2 text-sm font-medium border border-gray-300 rounded-lg hover:bg-gray-50 text-gray-700">
+                <Button variant="secondary" size="sm" onClick={() => setEditingPlan(plan)} className="mt-4 w-full py-2">
                   Edit Plan
-                </button>
-              </div>
+                </Button>
+              </Card>
             ))}
           </div>
         )}
@@ -97,48 +97,40 @@ export const Billing = () => {
         <Modal isOpen={!!editingPlan} onClose={() => setEditingPlan(null)} title={`Edit ${editingPlan?.name || ''} Plan`} size="large">
           {editingPlan && (
             <form onSubmit={handleSubmitEdit} className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Description</label>
-                <textarea name="description" defaultValue={editingPlan.description} rows={2} className={inputCls} />
+              <FormField label="Description">
+                <textarea name="description" defaultValue={editingPlan.description} rows={2} className={iosInputCls} />
+              </FormField>
+              <div className="grid grid-cols-2 gap-4">
+                <FormField label={`Monthly Price (${editingPlan.currency})`}>
+                  <input type="number" name="monthlyPrice" defaultValue={editingPlan.monthlyPrice} step="0.01" className={iosInputCls} />
+                </FormField>
+                <FormField label={`Yearly Price (${editingPlan.currency})`}>
+                  <input type="number" name="yearlyPrice" defaultValue={editingPlan.yearlyPrice} step="0.01" className={iosInputCls} />
+                </FormField>
               </div>
               <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Monthly Price ({editingPlan.currency})</label>
-                  <input type="number" name="monthlyPrice" defaultValue={editingPlan.monthlyPrice} step="0.01" className={inputCls} />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Yearly Price ({editingPlan.currency})</label>
-                  <input type="number" name="yearlyPrice" defaultValue={editingPlan.yearlyPrice} step="0.01" className={inputCls} />
-                </div>
+                <FormField label="Max Branches">
+                  <input type="number" name="maxBranches" defaultValue={editingPlan.maxBranches} className={iosInputCls} />
+                </FormField>
+                <FormField label="Max Clerks">
+                  <input type="number" name="maxClerks" defaultValue={editingPlan.maxClerks} className={iosInputCls} />
+                </FormField>
+                <FormField label="Max Services">
+                  <input type="number" name="maxServices" defaultValue={editingPlan.maxServices} className={iosInputCls} />
+                </FormField>
+                <FormField label="Max Orders/Month">
+                  <input type="number" name="maxOrdersPerMonth" defaultValue={editingPlan.maxOrdersPerMonth} className={iosInputCls} />
+                </FormField>
               </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Max Branches</label>
-                  <input type="number" name="maxBranches" defaultValue={editingPlan.maxBranches} className={inputCls} />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Max Clerks</label>
-                  <input type="number" name="maxClerks" defaultValue={editingPlan.maxClerks} className={inputCls} />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Max Services</label>
-                  <input type="number" name="maxServices" defaultValue={editingPlan.maxServices} className={inputCls} />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Max Orders/Month</label>
-                  <input type="number" name="maxOrdersPerMonth" defaultValue={editingPlan.maxOrdersPerMonth} className={inputCls} />
-                </div>
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Commission %</label>
-                <input type="number" name="commissionPercent" defaultValue={editingPlan.commissionPercent} step="0.1" min="0" max="100" className={inputCls} />
-              </div>
-              <p className="text-xs text-gray-400">Use -1 for unlimited limits. Feature flags (WhatsApp, CRM, etc.) are managed via database.</p>
+              <FormField label="Commission %">
+                <input type="number" name="commissionPercent" defaultValue={editingPlan.commissionPercent} step="0.1" min="0" max="100" className={iosInputCls} />
+              </FormField>
+              <p className="text-xs text-ios-gray">Use -1 for unlimited limits. Feature flags (WhatsApp, CRM, etc.) are managed via database.</p>
               <div className="flex justify-end gap-3 pt-2">
-                <button type="button" onClick={() => setEditingPlan(null)} className="px-4 py-2 text-sm font-medium text-gray-700 border border-gray-300 rounded-lg hover:bg-gray-50">Cancel</button>
-                <button type="submit" disabled={updateMutation.isPending} className="px-4 py-2 text-sm font-medium text-white bg-gray-900 rounded-lg hover:bg-gray-800 disabled:opacity-50">
+                <Button type="button" variant="secondary" onClick={() => setEditingPlan(null)}>Cancel</Button>
+                <Button type="submit" disabled={updateMutation.isPending}>
                   {updateMutation.isPending ? 'Saving...' : 'Save Changes'}
-                </button>
+                </Button>
               </div>
             </form>
           )}
@@ -147,7 +139,3 @@ export const Billing = () => {
     </Layout>
   );
 };
-
-const Badge = ({ label }: { label: string }) => (
-  <span className="inline-flex px-1.5 py-0.5 text-[10px] font-medium bg-gray-100 text-gray-600 rounded">{label}</span>
-);

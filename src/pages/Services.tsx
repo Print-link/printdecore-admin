@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import toast from 'react-hot-toast';
+import { FolderOpen, Layers, MoreVertical } from 'lucide-react';
 import {
   categoryService,
   subCategoryService,
@@ -10,12 +11,15 @@ import {
 import { LoadingSpinner } from '../components/LoadingSpinner';
 import { Layout } from '../components/Layout';
 import { Modal } from '../components/Modal';
+import { PageHeader } from '../components/ui/PageHeader';
+import { ListGroup, ListRow } from '../components/ui/ListGroup';
+import { Badge } from '../components/ui/Badge';
+import { Button } from '../components/ui/Button';
+import { Switch } from '../components/ui/Switch';
+import { FormField, iosInputCls } from '../components/ui/FormField';
 import type { ServiceCategory, ServiceSubCategory, ServiceTemplate } from '../types';
 
 type Tab = 'categories' | 'subcategories' | 'templates';
-
-const inputCls = 'w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-gray-900 focus:border-transparent';
-const labelCls = 'text-xs font-medium text-gray-500 block mb-1';
 
 export const Services = () => {
   const [tab, setTab] = useState<Tab>('categories');
@@ -23,18 +27,18 @@ export const Services = () => {
   return (
     <Layout>
       <div>
-        <h1 className="text-2xl font-bold text-gray-900 mb-1">Services</h1>
-        <p className="text-sm text-gray-500 mb-6">
-          The customer-facing catalogue — categories, sub-categories, and the price Printdecore charges for each service.
-        </p>
+        <PageHeader
+          title="Services"
+          subtitle="The customer-facing catalogue — categories, sub-categories, and the price Printdecore charges for each service."
+        />
 
-        <div className="flex gap-2 mb-6 border-b border-gray-200">
+        <div className="flex gap-1 mb-6 border-b border-ios-gray5">
           {(['categories', 'subcategories', 'templates'] as Tab[]).map((t) => (
             <button
               key={t}
               onClick={() => setTab(t)}
-              className={`px-4 py-2 text-sm font-medium border-b-2 -mb-px ${
-                tab === t ? 'border-gray-900 text-gray-900' : 'border-transparent text-gray-500 hover:text-gray-700'
+              className={`px-4 py-2 text-sm font-medium border-b-2 -mb-px transition-colors ${
+                tab === t ? 'border-brand-hover text-brand-hover' : 'border-transparent text-ios-secondary-label hover:text-ios-label'
               }`}
             >
               {t === 'categories' ? 'Categories' : t === 'subcategories' ? 'Sub-Categories' : 'Service Templates'}
@@ -56,10 +60,11 @@ function CategoriesTab() {
   const queryClient = useQueryClient();
   const [modalOpen, setModalOpen] = useState(false);
   const [editing, setEditing] = useState<ServiceCategory | null>(null);
+  const [openMenuId, setOpenMenuId] = useState<string | null>(null);
 
   const { data: categories = [], isLoading } = useQuery({
     queryKey: ['categories'],
-    queryFn: categoryService.getAll,
+    queryFn: () => categoryService.getAll(),
   });
 
   const createMutation = useMutation({
@@ -93,64 +98,73 @@ function CategoriesTab() {
 
   return (
     <div>
-      <div className="flex justify-end mb-4">
-        <button onClick={openCreate} className="px-4 py-2 bg-gray-900 text-white text-sm font-medium rounded-lg hover:bg-gray-800">
-          Add Category
-        </button>
+      <div className="flex justify-end mb-3">
+        <Button size="sm" onClick={openCreate}>Add Category</Button>
       </div>
 
       {isLoading ? (
         <div className="flex justify-center py-16"><LoadingSpinner /></div>
       ) : (
-        <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
-          <table className="w-full text-sm">
-            <thead className="bg-gray-50 border-b border-gray-200">
-              <tr>
-                <th className="text-left px-4 py-3 font-medium text-gray-500">Name</th>
-                <th className="text-left px-4 py-3 font-medium text-gray-500">Description</th>
-                <th className="text-right px-4 py-3 font-medium text-gray-500">Actions</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-100">
-              {categories.map((c) => (
-                <tr key={c.id} className="hover:bg-gray-50">
-                  <td className="px-4 py-3 font-medium text-gray-900">{c.name}</td>
-                  <td className="px-4 py-3 text-gray-600">{c.description || '-'}</td>
-                  <td className="px-4 py-3 text-right space-x-3">
-                    <button onClick={() => openEdit(c)} className="text-sm text-gray-600 hover:text-gray-900">Edit</button>
-                    <button onClick={() => confirm(`Delete "${c.name}"?`) && deleteMutation.mutate(c.id)} className="text-sm text-red-600 hover:text-red-800">Delete</button>
-                  </td>
-                </tr>
-              ))}
-              {categories.length === 0 && (
-                <tr><td colSpan={3} className="px-4 py-12 text-center text-gray-400">No categories yet</td></tr>
-              )}
-            </tbody>
-          </table>
-        </div>
+        <ListGroup>
+          {categories.map((c) => (
+            <ListRow
+              key={c.id}
+              leading={
+                <div className="w-10 h-10 rounded-xl bg-brand/15 flex items-center justify-center">
+                  <FolderOpen className="w-5 h-5 text-brand-hover" />
+                </div>
+              }
+              title={c.name}
+              subtitle={c.description || '-'}
+              trailing={
+                <div className="relative" onClick={(e) => e.stopPropagation()}>
+                  <button
+                    onClick={() => setOpenMenuId(openMenuId === c.id ? null : c.id)}
+                    className="p-1.5 rounded-full text-ios-gray hover:bg-ios-gray6"
+                    type="button"
+                    aria-label="More actions"
+                  >
+                    <MoreVertical className="w-4 h-4" />
+                  </button>
+                  {openMenuId === c.id && (
+                    <div className="absolute right-0 mt-1 w-32 bg-white rounded-ios shadow-ios border border-ios-gray5 py-1 z-10">
+                      <button onClick={() => { openEdit(c); setOpenMenuId(null); }} className="w-full text-left px-3 py-1.5 text-sm text-ios-label hover:bg-ios-gray6">Edit</button>
+                      <button
+                        onClick={() => { if (confirm(`Delete "${c.name}"?`)) deleteMutation.mutate(c.id); setOpenMenuId(null); }}
+                        className="w-full text-left px-3 py-1.5 text-sm text-ios-red hover:bg-ios-red/10"
+                      >
+                        Delete
+                      </button>
+                    </div>
+                  )}
+                </div>
+              }
+            />
+          ))}
+          {categories.length === 0 && (
+            <div className="px-4 py-12 text-center text-ios-gray text-sm">No categories yet</div>
+          )}
+        </ListGroup>
       )}
 
       <Modal isOpen={modalOpen} onClose={() => { setModalOpen(false); setEditing(null); }} title={editing ? 'Edit Category' : 'Add Category'}>
         <form onSubmit={handleSubmit} className="space-y-4">
-          <div>
-            <label className={labelCls}>Name</label>
-            <input name="name" defaultValue={editing?.name} required className={inputCls} />
-          </div>
-          <div>
-            <label className={labelCls}>Description</label>
-            <textarea name="description" defaultValue={editing?.description} rows={2} className={inputCls} />
-          </div>
-          <div>
-            <label className={labelCls}>Image</label>
-            <input name="image" type="file" accept="image/*" className={inputCls} />
-          </div>
-          <button
+          <FormField label="Name">
+            <input name="name" defaultValue={editing?.name} required className={iosInputCls} />
+          </FormField>
+          <FormField label="Description">
+            <textarea name="description" defaultValue={editing?.description} rows={2} className={iosInputCls} />
+          </FormField>
+          <FormField label="Image">
+            <input name="image" type="file" accept="image/*" className={iosInputCls} />
+          </FormField>
+          <Button
             type="submit"
             disabled={createMutation.isPending || updateMutation.isPending}
-            className="w-full px-4 py-2 bg-gray-900 text-white text-sm font-medium rounded-lg disabled:opacity-40"
+            className="w-full py-2.5"
           >
             {createMutation.isPending || updateMutation.isPending ? 'Saving…' : editing ? 'Save changes' : 'Create category'}
-          </button>
+          </Button>
         </form>
       </Modal>
     </div>
@@ -163,8 +177,9 @@ function SubCategoriesTab() {
   const queryClient = useQueryClient();
   const [modalOpen, setModalOpen] = useState(false);
   const [editing, setEditing] = useState<ServiceSubCategory | null>(null);
+  const [openMenuId, setOpenMenuId] = useState<string | null>(null);
 
-  const { data: categories = [] } = useQuery({ queryKey: ['categories'], queryFn: categoryService.getAll });
+  const { data: categories = [] } = useQuery({ queryKey: ['categories'], queryFn: () => categoryService.getAll() });
   const { data: subCategories = [], isLoading } = useQuery({
     queryKey: ['sub-categories'],
     queryFn: () => subCategoryService.getAll(),
@@ -203,83 +218,91 @@ function SubCategoriesTab() {
 
   return (
     <div>
-      <div className="flex justify-end mb-4">
-        <button onClick={openCreate} disabled={categories.length === 0} className="px-4 py-2 bg-gray-900 text-white text-sm font-medium rounded-lg hover:bg-gray-800 disabled:opacity-40">
-          Add Sub-Category
-        </button>
+      <div className="flex justify-end mb-3">
+        <Button size="sm" onClick={openCreate} disabled={categories.length === 0}>Add Sub-Category</Button>
       </div>
-      {categories.length === 0 && <p className="text-sm text-gray-400 mb-4">Add a category first.</p>}
+      {categories.length === 0 && <p className="text-sm text-ios-gray mb-3">Add a category first.</p>}
 
       {isLoading ? (
         <div className="flex justify-center py-16"><LoadingSpinner /></div>
       ) : (
-        <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
-          <table className="w-full text-sm">
-            <thead className="bg-gray-50 border-b border-gray-200">
-              <tr>
-                <th className="text-left px-4 py-3 font-medium text-gray-500">Name</th>
-                <th className="text-left px-4 py-3 font-medium text-gray-500">Category</th>
-                <th className="text-left px-4 py-3 font-medium text-gray-500">Pricing Type</th>
-                <th className="text-right px-4 py-3 font-medium text-gray-500">Actions</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-100">
-              {subCategories.map((s) => (
-                <tr key={s.id} className="hover:bg-gray-50">
-                  <td className="px-4 py-3 font-medium text-gray-900">{s.name}</td>
-                  <td className="px-4 py-3 text-gray-600">{categoryName(s.categoryId)}</td>
-                  <td className="px-4 py-3 text-gray-600">{s.pricingType.replace(/_/g, ' ')}</td>
-                  <td className="px-4 py-3 text-right space-x-3">
-                    <button onClick={() => openEdit(s)} className="text-sm text-gray-600 hover:text-gray-900">Edit</button>
-                    <button onClick={() => confirm(`Delete "${s.name}"?`) && deleteMutation.mutate(s.id)} className="text-sm text-red-600 hover:text-red-800">Delete</button>
-                  </td>
-                </tr>
-              ))}
-              {subCategories.length === 0 && (
-                <tr><td colSpan={4} className="px-4 py-12 text-center text-gray-400">No sub-categories yet</td></tr>
-              )}
-            </tbody>
-          </table>
-        </div>
+        <ListGroup>
+          {subCategories.map((s) => (
+            <ListRow
+              key={s.id}
+              leading={
+                <div className="w-10 h-10 rounded-xl bg-brand/15 flex items-center justify-center">
+                  <Layers className="w-5 h-5 text-brand-hover" />
+                </div>
+              }
+              title={s.name}
+              subtitle={categoryName(s.categoryId)}
+              trailing={
+                <>
+                  <Badge variant="neutral">{s.pricingType.replace(/_/g, ' ')}</Badge>
+                  <div className="relative" onClick={(e) => e.stopPropagation()}>
+                    <button
+                      onClick={() => setOpenMenuId(openMenuId === s.id ? null : s.id)}
+                      className="p-1.5 rounded-full text-ios-gray hover:bg-ios-gray6"
+                      type="button"
+                      aria-label="More actions"
+                    >
+                      <MoreVertical className="w-4 h-4" />
+                    </button>
+                    {openMenuId === s.id && (
+                      <div className="absolute right-0 mt-1 w-32 bg-white rounded-ios shadow-ios border border-ios-gray5 py-1 z-10">
+                        <button onClick={() => { openEdit(s); setOpenMenuId(null); }} className="w-full text-left px-3 py-1.5 text-sm text-ios-label hover:bg-ios-gray6">Edit</button>
+                        <button
+                          onClick={() => { if (confirm(`Delete "${s.name}"?`)) deleteMutation.mutate(s.id); setOpenMenuId(null); }}
+                          className="w-full text-left px-3 py-1.5 text-sm text-ios-red hover:bg-ios-red/10"
+                        >
+                          Delete
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                </>
+              }
+            />
+          ))}
+          {subCategories.length === 0 && (
+            <div className="px-4 py-12 text-center text-ios-gray text-sm">No sub-categories yet</div>
+          )}
+        </ListGroup>
       )}
 
       <Modal isOpen={modalOpen} onClose={() => { setModalOpen(false); setEditing(null); }} title={editing ? 'Edit Sub-Category' : 'Add Sub-Category'}>
         <form onSubmit={handleSubmit} className="space-y-4">
-          <div>
-            <label className={labelCls}>Category</label>
-            <select name="categoryId" defaultValue={editing?.categoryId} required className={inputCls}>
+          <FormField label="Category">
+            <select name="categoryId" defaultValue={editing?.categoryId} required className={iosInputCls}>
               <option value="">Select a category</option>
               {categories.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
             </select>
-          </div>
-          <div>
-            <label className={labelCls}>Name</label>
-            <input name="name" defaultValue={editing?.name} required className={inputCls} />
-          </div>
-          <div>
-            <label className={labelCls}>Pricing type</label>
-            <select name="pricingType" defaultValue={editing?.pricingType || 'UNIT_BASED'} required className={inputCls}>
+          </FormField>
+          <FormField label="Name">
+            <input name="name" defaultValue={editing?.name} required className={iosInputCls} />
+          </FormField>
+          <FormField label="Pricing type">
+            <select name="pricingType" defaultValue={editing?.pricingType || 'UNIT_BASED'} required className={iosInputCls}>
               <option value="AREA_BASED">Area based</option>
               <option value="UNIT_BASED">Unit based</option>
               <option value="MIXED">Mixed</option>
               <option value="CUSTOM_QUOTE">Custom quote</option>
             </select>
-          </div>
-          <div>
-            <label className={labelCls}>Description</label>
-            <textarea name="description" defaultValue={editing?.description} rows={2} className={inputCls} />
-          </div>
-          <div>
-            <label className={labelCls}>Image</label>
-            <input name="image" type="file" accept="image/*" className={inputCls} />
-          </div>
-          <button
+          </FormField>
+          <FormField label="Description">
+            <textarea name="description" defaultValue={editing?.description} rows={2} className={iosInputCls} />
+          </FormField>
+          <FormField label="Image">
+            <input name="image" type="file" accept="image/*" className={iosInputCls} />
+          </FormField>
+          <Button
             type="submit"
             disabled={createMutation.isPending || updateMutation.isPending}
-            className="w-full px-4 py-2 bg-gray-900 text-white text-sm font-medium rounded-lg disabled:opacity-40"
+            className="w-full py-2.5"
           >
             {createMutation.isPending || updateMutation.isPending ? 'Saving…' : editing ? 'Save changes' : 'Create sub-category'}
-          </button>
+          </Button>
         </form>
       </Modal>
     </div>
@@ -292,6 +315,7 @@ function TemplatesTab() {
   const queryClient = useQueryClient();
   const [modalOpen, setModalOpen] = useState(false);
   const [editing, setEditing] = useState<ServiceTemplate | null>(null);
+  const [openMenuId, setOpenMenuId] = useState<string | null>(null);
 
   const { data: subCategories = [] } = useQuery({ queryKey: ['sub-categories'], queryFn: () => subCategoryService.getAll() });
   const { data: formulas = [] } = useQuery({ queryKey: ['pricing-formulas'], queryFn: pricingFormulaService.getAll });
@@ -351,131 +375,124 @@ function TemplatesTab() {
 
   return (
     <div>
-      <div className="flex justify-end mb-4">
-        <button onClick={openCreate} disabled={subCategories.length === 0} className="px-4 py-2 bg-gray-900 text-white text-sm font-medium rounded-lg hover:bg-gray-800 disabled:opacity-40">
-          Add Service
-        </button>
+      <div className="flex justify-end mb-3">
+        <Button size="sm" onClick={openCreate} disabled={subCategories.length === 0}>Add Service</Button>
       </div>
-      {subCategories.length === 0 && <p className="text-sm text-gray-400 mb-4">Add a sub-category first.</p>}
+      {subCategories.length === 0 && <p className="text-sm text-ios-gray mb-3">Add a sub-category first.</p>}
 
       {isLoading ? (
         <div className="flex justify-center py-16"><LoadingSpinner /></div>
       ) : (
-        <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
-          <table className="w-full text-sm">
-            <thead className="bg-gray-50 border-b border-gray-200">
-              <tr>
-                <th className="text-left px-4 py-3 font-medium text-gray-500">Service</th>
-                <th className="text-left px-4 py-3 font-medium text-gray-500">Sub-Category</th>
-                <th className="text-right px-4 py-3 font-medium text-gray-500">Customer Price</th>
-                <th className="text-center px-4 py-3 font-medium text-gray-500">Active</th>
-                <th className="text-right px-4 py-3 font-medium text-gray-500">Actions</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-100">
-              {templates.map((t) => (
-                <tr key={t.id} className="hover:bg-gray-50">
-                  <td className="px-4 py-3 font-medium text-gray-900">{t.name}</td>
-                  <td className="px-4 py-3 text-gray-600">{subCategoryName(t.subCategoryId)}</td>
-                  <td className="px-4 py-3 text-right text-gray-900">
-                    {t.pricePerUnit != null ? `GHS ${t.pricePerUnit.toFixed(2)}` : <span className="text-amber-600">Not set</span>}
-                  </td>
-                  <td className="px-4 py-3 text-center">
+        <div className="bg-white rounded-ios shadow-ios divide-y divide-ios-gray5 overflow-hidden">
+          {templates.map((t) => (
+            <div key={t.id} className="flex items-center gap-3 px-3.5 py-2.5">
+              <div className="w-9 h-9 rounded-xl bg-brand/15 flex items-center justify-center shrink-0">
+                <Layers className="w-4 h-4 text-brand-hover" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-medium text-ios-label truncate">{t.name}</p>
+                <p className="text-xs text-ios-secondary-label truncate mt-0.5">{subCategoryName(t.subCategoryId)}</p>
+              </div>
+              <div className="shrink-0 text-sm text-ios-label">
+                {t.pricePerUnit != null ? `GHS ${t.pricePerUnit.toFixed(2)}` : <span className="text-ios-orange text-xs">Not set</span>}
+              </div>
+              <Switch checked={t.isActive} onChange={() => toggleActiveMutation.mutate({ id: t.id, isActive: !t.isActive })} />
+              <div className="relative shrink-0">
+                <button
+                  onClick={() => setOpenMenuId(openMenuId === t.id ? null : t.id)}
+                  className="p-1.5 rounded-full text-ios-gray hover:bg-ios-gray6"
+                  type="button"
+                  aria-label="More actions"
+                >
+                  <MoreVertical className="w-4 h-4" />
+                </button>
+                {openMenuId === t.id && (
+                  <div className="absolute right-0 mt-1 w-32 bg-white rounded-ios shadow-ios border border-ios-gray5 py-1 z-10">
+                    <button onClick={() => { openEdit(t); setOpenMenuId(null); }} className="w-full text-left px-3 py-1.5 text-sm text-ios-label hover:bg-ios-gray6">Edit</button>
                     <button
-                      onClick={() => toggleActiveMutation.mutate({ id: t.id, isActive: !t.isActive })}
-                      className={`inline-flex px-2 py-0.5 text-xs font-medium rounded-full ${t.isActive ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500'}`}
+                      onClick={() => { if (confirm(`Delete "${t.name}"?`)) deleteMutation.mutate(t.id); setOpenMenuId(null); }}
+                      className="w-full text-left px-3 py-1.5 text-sm text-ios-red hover:bg-ios-red/10"
                     >
-                      {t.isActive ? 'Active' : 'Inactive'}
+                      Delete
                     </button>
-                  </td>
-                  <td className="px-4 py-3 text-right space-x-3">
-                    <button onClick={() => openEdit(t)} className="text-sm text-gray-600 hover:text-gray-900">Edit</button>
-                    <button onClick={() => confirm(`Delete "${t.name}"?`) && deleteMutation.mutate(t.id)} className="text-sm text-red-600 hover:text-red-800">Delete</button>
-                  </td>
-                </tr>
-              ))}
-              {templates.length === 0 && (
-                <tr><td colSpan={5} className="px-4 py-12 text-center text-gray-400">No services yet</td></tr>
-              )}
-            </tbody>
-          </table>
+                  </div>
+                )}
+              </div>
+            </div>
+          ))}
+          {templates.length === 0 && (
+            <div className="px-4 py-12 text-center text-ios-gray text-sm">No services yet</div>
+          )}
         </div>
       )}
 
       <Modal isOpen={modalOpen} onClose={() => { setModalOpen(false); setEditing(null); }} title={editing ? 'Edit Service' : 'Add Service'} size="large">
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="grid grid-cols-2 gap-4">
-            <div>
-              <label className={labelCls}>Sub-Category</label>
-              <select name="subCategoryId" defaultValue={editing?.subCategoryId} required className={inputCls}>
+            <FormField label="Sub-Category">
+              <select name="subCategoryId" defaultValue={editing?.subCategoryId} required className={iosInputCls}>
                 <option value="">Select a sub-category</option>
                 {subCategories.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
               </select>
-            </div>
-            <div>
-              <label className={labelCls}>Name</label>
-              <input name="name" defaultValue={editing?.name} required className={inputCls} />
-            </div>
-            <div>
-              <label className={labelCls}>Measurement unit</label>
-              <select name="measurementUnit" defaultValue={editing?.measurementUnit || 'UNIT'} required className={inputCls}>
+            </FormField>
+            <FormField label="Name">
+              <input name="name" defaultValue={editing?.name} required className={iosInputCls} />
+            </FormField>
+            <FormField label="Measurement unit">
+              <select name="measurementUnit" defaultValue={editing?.measurementUnit || 'UNIT'} required className={iosInputCls}>
                 <option value="UNIT">Unit</option>
                 <option value="FEET">Feet</option>
                 <option value="INCH">Inch</option>
               </select>
-            </div>
-            <div>
-              <label className={labelCls}>Pricing formula</label>
-              <select name="pricingFormulaId" defaultValue={editing?.pricingFormulaId} required className={inputCls}>
+            </FormField>
+            <FormField label="Pricing formula">
+              <select name="pricingFormulaId" defaultValue={editing?.pricingFormulaId} required className={iosInputCls}>
                 <option value="">Select a formula</option>
                 {formulas.map((f) => <option key={f.id} value={f.id}>{f.code} ({f.formulaType})</option>)}
               </select>
-            </div>
+            </FormField>
           </div>
 
-          <div className="border border-gray-200 rounded-lg p-4 bg-gray-50 space-y-3">
-            <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Customer price</p>
-            <p className="text-xs text-gray-400 -mt-2">
+          <div className="border border-ios-gray5 rounded-ios p-4 bg-ios-gray6 space-y-3">
+            <p className="text-xs font-semibold text-ios-secondary-label uppercase tracking-wide">Customer price</p>
+            <p className="text-xs text-ios-gray -mt-2">
               What the customer pays. Separate from any vendor's own production rate.
             </p>
             <div className="grid grid-cols-3 gap-4">
-              <div>
-                <label className={labelCls}>Price per unit (GHS)</label>
-                <input name="pricePerUnit" type="number" min="0" step="0.01" defaultValue={editing?.pricePerUnit} className={inputCls} />
-              </div>
-              <div>
-                <label className={labelCls}>Constant</label>
-                <input name="constant" type="number" min="0" step="0.01" defaultValue={editing?.constant} className={inputCls} />
-              </div>
-              <div>
-                <label className={labelCls}>Color modifier</label>
-                <input name="colorPriceModifier" type="number" min="0" step="0.01" defaultValue={editing?.colorPriceModifier} className={inputCls} />
-              </div>
+              <FormField label="Price per unit (GHS)">
+                <input name="pricePerUnit" type="number" min="0" step="0.01" defaultValue={editing?.pricePerUnit} className={iosInputCls} />
+              </FormField>
+              <FormField label="Constant">
+                <input name="constant" type="number" min="0" step="0.01" defaultValue={editing?.constant} className={iosInputCls} />
+              </FormField>
+              <FormField label="Color modifier">
+                <input name="colorPriceModifier" type="number" min="0" step="0.01" defaultValue={editing?.colorPriceModifier} className={iosInputCls} />
+              </FormField>
             </div>
           </div>
 
           <div className="flex flex-wrap gap-4">
-            <label className="flex items-center gap-2 text-sm text-gray-700">
+            <label className="flex items-center gap-2 text-sm text-ios-label">
               <input type="checkbox" name="allowsCustomSize" defaultChecked={editing?.allowsCustomSize} /> Custom size
             </label>
-            <label className="flex items-center gap-2 text-sm text-gray-700">
+            <label className="flex items-center gap-2 text-sm text-ios-label">
               <input type="checkbox" name="supportsFrontBack" defaultChecked={editing?.supportsFrontBack} /> Front &amp; back
             </label>
-            <label className="flex items-center gap-2 text-sm text-gray-700">
+            <label className="flex items-center gap-2 text-sm text-ios-label">
               <input type="checkbox" name="supportsColor" defaultChecked={editing?.supportsColor} /> Color
             </label>
-            <label className="flex items-center gap-2 text-sm text-gray-700">
+            <label className="flex items-center gap-2 text-sm text-ios-label">
               <input type="checkbox" name="supportsPrintCut" defaultChecked={editing?.supportsPrintCut} /> Print &amp; cut
             </label>
           </div>
 
-          <button
+          <Button
             type="submit"
             disabled={createMutation.isPending || updateMutation.isPending}
-            className="w-full px-4 py-2 bg-gray-900 text-white text-sm font-medium rounded-lg disabled:opacity-40"
+            className="w-full py-2.5"
           >
             {createMutation.isPending || updateMutation.isPending ? 'Saving…' : editing ? 'Save changes' : 'Create service'}
-          </button>
+          </Button>
         </form>
       </Modal>
     </div>

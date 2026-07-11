@@ -5,21 +5,27 @@ import { LoadingSpinner } from '../components/LoadingSpinner';
 import { Layout } from '../components/Layout';
 import { Modal } from '../components/Modal';
 import { Pagination } from '../components/Pagination';
+import { PageHeader } from '../components/ui/PageHeader';
+import { Badge } from '../components/ui/Badge';
+import { Button } from '../components/ui/Button';
+import { FormField, iosInputCls } from '../components/ui/FormField';
 import type { Order, OrderStatus } from '../types';
 
-const statusColors: Record<OrderStatus, string> = {
-  PENDING: 'bg-yellow-100 text-yellow-700',
-  QUOTED: 'bg-blue-100 text-blue-700',
-  PAID: 'bg-indigo-100 text-indigo-700',
-  RECEIVED: 'bg-purple-100 text-purple-700',
-  IN_PROGRESS: 'bg-orange-100 text-orange-700',
-  PRINTING: 'bg-orange-100 text-orange-700',
-  QUALITY_CHECK: 'bg-violet-100 text-violet-700',
-  READY_FOR_PICKUP: 'bg-cyan-100 text-cyan-700',
-  OUT_FOR_DELIVERY: 'bg-indigo-100 text-indigo-700',
-  DELIVERED: 'bg-green-100 text-green-700',
-  COMPLETED: 'bg-green-100 text-green-700',
-  CANCELLED: 'bg-red-100 text-red-700',
+type BadgeVariant = 'success' | 'neutral' | 'warning' | 'danger';
+
+const statusVariant: Record<OrderStatus, BadgeVariant> = {
+  PENDING: 'warning',
+  QUOTED: 'neutral',
+  PAID: 'success',
+  RECEIVED: 'neutral',
+  IN_PROGRESS: 'warning',
+  PRINTING: 'warning',
+  QUALITY_CHECK: 'neutral',
+  READY_FOR_PICKUP: 'neutral',
+  OUT_FOR_DELIVERY: 'neutral',
+  DELIVERED: 'success',
+  COMPLETED: 'success',
+  CANCELLED: 'danger',
 };
 
 const ALL_STATUSES: OrderStatus[] = [
@@ -86,11 +92,14 @@ export const Orders = () => {
   return (
     <Layout>
       <div>
-        <h1 className="text-2xl font-bold text-gray-900 mb-6">Orders</h1>
+        <PageHeader title="Orders" />
 
         <div className="flex gap-3 mb-4">
-          <select value={statusFilter} onChange={(e) => { setStatusFilter(e.target.value); setPage(1); }}
-            className="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-gray-900">
+          <select
+            value={statusFilter}
+            onChange={(e) => { setStatusFilter(e.target.value); setPage(1); }}
+            className={`max-w-xs ${iosInputCls}`}
+          >
             <option value="">All Status</option>
             {ALL_STATUSES.map((s) => (
               <option key={s} value={s}>{s.replace(/_/g, ' ')}</option>
@@ -102,41 +111,39 @@ export const Orders = () => {
           <div className="flex justify-center py-16"><LoadingSpinner /></div>
         ) : (
           <>
-            <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
+            <div className="bg-white rounded-ios shadow-ios overflow-hidden">
               <table className="w-full text-sm">
-                <thead className="bg-gray-50 border-b border-gray-200">
+                <thead className="bg-ios-gray6 border-b border-ios-gray5">
                   <tr>
-                    <th className="text-left px-4 py-3 font-medium text-gray-500">Order ID</th>
-                    <th className="text-left px-4 py-3 font-medium text-gray-500">Customer</th>
-                    <th className="text-left px-4 py-3 font-medium text-gray-500">Branch</th>
-                    <th className="text-left px-4 py-3 font-medium text-gray-500">Status</th>
-                    <th className="text-right px-4 py-3 font-medium text-gray-500">Total</th>
-                    <th className="text-right px-4 py-3 font-medium text-gray-500">Commission</th>
-                    <th className="text-left px-4 py-3 font-medium text-gray-500">Date</th>
-                    <th className="text-right px-4 py-3 font-medium text-gray-500">Actions</th>
+                    <th className="text-left px-4 py-3 font-medium text-ios-secondary-label">Order ID</th>
+                    <th className="text-left px-4 py-3 font-medium text-ios-secondary-label">Customer</th>
+                    <th className="text-left px-4 py-3 font-medium text-ios-secondary-label">Branch</th>
+                    <th className="text-left px-4 py-3 font-medium text-ios-secondary-label">Status</th>
+                    <th className="text-right px-4 py-3 font-medium text-ios-secondary-label">Total</th>
+                    <th className="text-right px-4 py-3 font-medium text-ios-secondary-label">Commission</th>
+                    <th className="text-left px-4 py-3 font-medium text-ios-secondary-label">Date</th>
+                    <th className="text-right px-4 py-3 font-medium text-ios-secondary-label">Actions</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-gray-100">
+                <tbody className="divide-y divide-ios-gray5">
                   {data?.orders.map((order) => (
-                    <tr key={order.id} className="hover:bg-gray-50">
-                      <td className="px-4 py-3 font-mono text-xs text-gray-600">#{order.id.slice(-8)}</td>
-                      <td className="px-4 py-3 font-medium text-gray-900">{order.customerName || order.customerEmail || '-'}</td>
-                      <td className="px-4 py-3 text-gray-600">{order.branchName || order.branchId}</td>
+                    <tr key={order.id} className="hover:bg-ios-gray6">
+                      <td className="px-4 py-3 font-mono text-xs text-ios-secondary-label">#{order.id.slice(-8)}</td>
+                      <td className="px-4 py-3 font-medium text-ios-label">{order.customerName || order.customerEmail || '-'}</td>
+                      <td className="px-4 py-3 text-ios-secondary-label">{order.branchName || order.branchId}</td>
                       <td className="px-4 py-3">
-                        <span className={`inline-flex px-2 py-0.5 text-xs font-medium rounded-full ${statusColors[order.status] || 'bg-gray-100 text-gray-600'}`}>
-                          {order.status}
-                        </span>
+                        <Badge variant={statusVariant[order.status] || 'neutral'}>{order.status}</Badge>
                       </td>
-                      <td className="px-4 py-3 text-right font-medium text-gray-900">{order.currency || 'GHS'} {order.totalPrice?.toFixed(2)}</td>
-                      <td className="px-4 py-3 text-right text-gray-500">{order.commissionAmount != null ? `${order.currency || 'GHS'} ${order.commissionAmount.toFixed(2)}` : '-'}</td>
-                      <td className="px-4 py-3 text-gray-500">{new Date(order.createdAt).toLocaleDateString()}</td>
+                      <td className="px-4 py-3 text-right font-medium text-ios-label">{order.currency || 'GHS'} {order.totalPrice?.toFixed(2)}</td>
+                      <td className="px-4 py-3 text-right text-ios-secondary-label">{order.commissionAmount != null ? `${order.currency || 'GHS'} ${order.commissionAmount.toFixed(2)}` : '-'}</td>
+                      <td className="px-4 py-3 text-ios-secondary-label">{new Date(order.createdAt).toLocaleDateString()}</td>
                       <td className="px-4 py-3 text-right">
-                        <button onClick={() => openOrder(order)} className="text-sm text-gray-600 hover:text-gray-900">View</button>
+                        <Button size="sm" variant="ghost" onClick={() => openOrder(order)}>View</Button>
                       </td>
                     </tr>
                   ))}
                   {(!data?.orders || data.orders.length === 0) && (
-                    <tr><td colSpan={8} className="px-4 py-12 text-center text-gray-400">No orders found</td></tr>
+                    <tr><td colSpan={8} className="px-4 py-12 text-center text-ios-gray">No orders found</td></tr>
                   )}
                 </tbody>
               </table>
@@ -163,99 +170,96 @@ export const Orders = () => {
               </div>
 
               {/* Ops actions — never visible to the customer */}
-              <div className="border border-gray-200 rounded-lg p-4 space-y-4 bg-gray-50">
-                <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Operations</p>
+              <div className="border border-ios-gray5 rounded-ios p-4 space-y-4 bg-ios-gray6">
+                <p className="text-xs font-semibold text-ios-secondary-label uppercase tracking-wide">Operations</p>
 
-                <div>
-                  <label className="text-xs font-medium text-gray-500 block mb-1">Status</label>
+                <FormField label="Status">
                   <div className="flex gap-2">
                     <select
                       value={statusDraft}
                       onChange={(e) => setStatusDraft(e.target.value as OrderStatus)}
-                      className="flex-1 px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-gray-900"
+                      className={`flex-1 ${iosInputCls}`}
                     >
                       {ALL_STATUSES.map((s) => (
                         <option key={s} value={s}>{s.replace(/_/g, ' ')}</option>
                       ))}
                     </select>
-                    <button
+                    <Button
+                      size="sm"
                       onClick={() => statusDraft && updateStatusMutation.mutate({ id: selectedOrder.id, status: statusDraft })}
                       disabled={!statusDraft || statusDraft === selectedOrder.status || updateStatusMutation.isPending}
-                      className="px-4 py-2 bg-gray-900 text-white text-sm font-medium rounded-lg disabled:opacity-40"
                     >
                       {updateStatusMutation.isPending ? 'Saving…' : 'Update'}
-                    </button>
+                    </Button>
                   </div>
-                </div>
+                </FormField>
 
-                <div>
-                  <label className="text-xs font-medium text-gray-500 block mb-1">Assigned production partner</label>
+                <FormField label="Assigned production partner">
                   <div className="flex gap-2">
                     <select
                       value={vendorDraft}
                       onChange={(e) => setVendorDraft(e.target.value)}
-                      className="flex-1 px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-gray-900"
+                      className={`flex-1 ${iosInputCls}`}
                     >
                       <option value="">Unassigned</option>
                       {branches?.branches.map((b) => (
                         <option key={b.id} value={b.id}>{b.name}</option>
                       ))}
                     </select>
-                    <button
+                    <Button
+                      size="sm"
                       onClick={() => vendorDraft && assignVendorMutation.mutate({ id: selectedOrder.id, vendorId: vendorDraft })}
                       disabled={!vendorDraft || vendorDraft === selectedOrder.assignedVendorId || assignVendorMutation.isPending}
-                      className="px-4 py-2 bg-gray-900 text-white text-sm font-medium rounded-lg disabled:opacity-40"
                     >
                       {assignVendorMutation.isPending ? 'Saving…' : 'Assign'}
-                    </button>
+                    </Button>
                   </div>
-                </div>
+                </FormField>
 
-                <div>
-                  <label className="text-xs font-medium text-gray-500 block mb-1">Internal notes (never shown to the customer)</label>
+                <FormField label="Internal notes (never shown to the customer)">
                   <textarea
                     value={notesDraft}
                     onChange={(e) => setNotesDraft(e.target.value)}
                     rows={3}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-gray-900"
+                    className={iosInputCls}
                     placeholder="e.g. vendor confirmed by phone, expect delay on stock"
                   />
-                  <button
-                    onClick={() => updateNotesMutation.mutate({ id: selectedOrder.id, note: notesDraft })}
-                    disabled={notesDraft === (selectedOrder.internalNotes || '') || updateNotesMutation.isPending}
-                    className="mt-2 px-4 py-2 bg-gray-900 text-white text-sm font-medium rounded-lg disabled:opacity-40"
-                  >
-                    {updateNotesMutation.isPending ? 'Saving…' : 'Save note'}
-                  </button>
-                </div>
+                </FormField>
+                <Button
+                  size="sm"
+                  onClick={() => updateNotesMutation.mutate({ id: selectedOrder.id, note: notesDraft })}
+                  disabled={notesDraft === (selectedOrder.internalNotes || '') || updateNotesMutation.isPending}
+                >
+                  {updateNotesMutation.isPending ? 'Saving…' : 'Save note'}
+                </Button>
               </div>
 
               {selectedOrder.comment && (
                 <div>
-                  <p className="text-xs font-medium text-gray-500 mb-1">Customer comment</p>
-                  <p className="text-sm text-gray-800 bg-gray-50 rounded-lg p-3 whitespace-pre-wrap">{selectedOrder.comment}</p>
+                  <p className="text-xs font-medium text-ios-secondary-label mb-1">Customer comment</p>
+                  <p className="text-sm text-ios-label bg-ios-gray6 rounded-ios p-3 whitespace-pre-wrap">{selectedOrder.comment}</p>
                 </div>
               )}
               {selectedOrder.items && selectedOrder.items.length > 0 && (
                 <div>
-                  <p className="text-xs font-medium text-gray-500 mb-2">Items</p>
-                  <div className="border border-gray-200 rounded-lg overflow-hidden">
+                  <p className="text-xs font-medium text-ios-secondary-label mb-2">Items</p>
+                  <div className="border border-ios-gray5 rounded-ios overflow-hidden">
                     <table className="w-full text-sm">
-                      <thead className="bg-gray-50">
+                      <thead className="bg-ios-gray6">
                         <tr>
-                          <th className="text-left px-3 py-2 text-xs font-medium text-gray-500">Service</th>
-                          <th className="text-right px-3 py-2 text-xs font-medium text-gray-500">Qty</th>
-                          <th className="text-right px-3 py-2 text-xs font-medium text-gray-500">Unit Price</th>
-                          <th className="text-right px-3 py-2 text-xs font-medium text-gray-500">Total</th>
+                          <th className="text-left px-3 py-2 text-xs font-medium text-ios-secondary-label">Service</th>
+                          <th className="text-right px-3 py-2 text-xs font-medium text-ios-secondary-label">Qty</th>
+                          <th className="text-right px-3 py-2 text-xs font-medium text-ios-secondary-label">Unit Price</th>
+                          <th className="text-right px-3 py-2 text-xs font-medium text-ios-secondary-label">Total</th>
                         </tr>
                       </thead>
-                      <tbody className="divide-y divide-gray-100">
+                      <tbody className="divide-y divide-ios-gray5">
                         {selectedOrder.items.map((item) => (
                           <tr key={item.id}>
-                            <td className="px-3 py-2">{item.serviceName}</td>
-                            <td className="px-3 py-2 text-right">{item.quantity}</td>
-                            <td className="px-3 py-2 text-right">{item.unitPrice?.toFixed(2)}</td>
-                            <td className="px-3 py-2 text-right font-medium">{item.totalPrice?.toFixed(2)}</td>
+                            <td className="px-3 py-2 text-ios-label">{item.serviceName}</td>
+                            <td className="px-3 py-2 text-right text-ios-label">{item.quantity}</td>
+                            <td className="px-3 py-2 text-right text-ios-label">{item.unitPrice?.toFixed(2)}</td>
+                            <td className="px-3 py-2 text-right font-medium text-ios-label">{item.totalPrice?.toFixed(2)}</td>
                           </tr>
                         ))}
                       </tbody>
@@ -273,7 +277,7 @@ export const Orders = () => {
 
 const Field = ({ label, value }: { label: string; value: string }) => (
   <div>
-    <p className="text-xs font-medium text-gray-500">{label}</p>
-    <p className="text-sm text-gray-800">{value}</p>
+    <p className="text-xs font-medium text-ios-secondary-label">{label}</p>
+    <p className="text-sm text-ios-label">{value}</p>
   </div>
 );

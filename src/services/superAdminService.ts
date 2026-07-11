@@ -20,6 +20,8 @@ import type {
   ServiceSubCategory,
   ServiceTemplate,
   PricingFormula,
+  AgentService,
+  BranchDetailResponse,
 } from '../types';
 
 // Auth
@@ -175,6 +177,10 @@ export const branchService = {
       branches: paginatedBranches,
       pagination: { currentPage, totalPages: Math.ceil(totalItems / itemsPerPage), totalItems, itemsPerPage }
     };
+  },
+  getById: async (id: string) => {
+    const response = await api.get<{ success: boolean; data: BranchDetailResponse }>(`/branches/${id}`);
+    return response.data.data;
   },
   create: async (data: any) => {
     const response = await api.post<{ success: boolean; data: Branch }>('/branches', data, {
@@ -486,8 +492,10 @@ export const blogService = {
 
 // Service Catalogue — Categories, Sub-categories, Service Templates, Pricing Formulas
 export const categoryService = {
-  getAll: async () => {
-    const response = await api.get<{ success: boolean; data: ServiceCategory[] }>('/categories');
+  getAll: async (branchId?: string) => {
+    const response = await api.get<{ success: boolean; data: ServiceCategory[] }>('/categories', {
+      params: branchId ? { branchId } : undefined,
+    });
     return response.data.data || [];
   },
   create: async (data: FormData) => {
@@ -509,9 +517,9 @@ export const categoryService = {
 };
 
 export const subCategoryService = {
-  getAll: async (categoryId?: string) => {
+  getAll: async (categoryId?: string, branchId?: string) => {
     const response = await api.get<{ success: boolean; data: ServiceSubCategory[] }>('/sub-categories', {
-      params: categoryId ? { categoryId } : undefined,
+      params: { ...(categoryId ? { categoryId } : {}), ...(branchId ? { branchId } : {}) },
     });
     return response.data.data || [];
   },
@@ -541,9 +549,9 @@ export const pricingFormulaService = {
 };
 
 export const serviceTemplateService = {
-  getAll: async (subCategoryId?: string) => {
+  getAll: async (subCategoryId?: string, branchId?: string) => {
     const response = await api.get<{ success: boolean; data: ServiceTemplate[] }>('/service-templates', {
-      params: subCategoryId ? { subCategoryId } : undefined,
+      params: { ...(subCategoryId ? { subCategoryId } : {}), ...(branchId ? { branchId } : {}) },
     });
     return response.data.data || [];
   },
@@ -557,6 +565,41 @@ export const serviceTemplateService = {
   },
   delete: async (id: string) => {
     const response = await api.delete<{ success: boolean }>(`/service-templates/${id}`);
+    return response.data;
+  },
+};
+
+// Agent Services — a branch's own rate/configuration for a service template.
+export const agentServiceService = {
+  getAll: async (params?: { branchId?: string; serviceTemplateId?: string; subCategoryId?: string; isActive?: boolean }) => {
+    const response = await api.get<{ success: boolean; data: AgentService[]; count: number }>('/agent-services', { params });
+    return response.data.data || [];
+  },
+  create: async (data: {
+    branchId: string;
+    serviceTemplateId: string;
+    pricePerUnit?: number;
+    constant?: number;
+    colorPriceModifier?: number;
+    isActive?: boolean;
+    supportsPrintCut?: boolean;
+    supportsColor?: boolean;
+    supportsFrontBack?: boolean;
+    supportsFrontOnly?: boolean;
+  }) => {
+    const response = await api.post<{ success: boolean; data: AgentService }>('/agent-services', data);
+    return response.data.data;
+  },
+  update: async (id: string, data: Partial<AgentService>) => {
+    const response = await api.put<{ success: boolean; data: AgentService }>(`/agent-services/${id}`, data);
+    return response.data.data;
+  },
+  updatePricingConfig: async (id: string, pricingConfig: Record<string, unknown>) => {
+    const response = await api.put<{ success: boolean; data: AgentService }>(`/agent-services/${id}/pricing-config`, { pricingConfig });
+    return response.data.data;
+  },
+  delete: async (id: string) => {
+    const response = await api.delete<{ success: boolean }>(`/agent-services/${id}`);
     return response.data;
   },
 };

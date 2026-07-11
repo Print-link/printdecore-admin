@@ -259,6 +259,59 @@ export interface ServiceTemplate {
   updatedAt?: string;
 }
 
+// The branch↔service link — a branch's own rate/configuration for a service template.
+export interface AgentService {
+  id: string;
+  branchId: string;
+  serviceTemplateId: string;
+  pricePerUnit?: number;
+  constant?: number;
+  colorPriceModifier?: number;
+  isActive: boolean;
+  supportsPrintCut: boolean;
+  supportsColor: boolean;
+  supportsFrontBack: boolean;
+  supportsFrontOnly: boolean;
+  formulaType?: FormulaType;
+  pricingConfig?: Record<string, unknown>;
+  serviceName?: string;
+  createdAt?: string;
+  updatedAt?: string;
+  serviceTemplate?: ServiceTemplate;
+  subCategory?: ServiceSubCategory;
+  category?: ServiceCategory;
+}
+
+// Shape returned by GET /branches/:id — diverges from the list-endpoint `Branch` type.
+export interface BranchDetailResponse {
+  id: string;
+  name: string;
+  address?: string;
+  operatingHours?: Record<string, { open: string; close: string }>;
+  coverImage?: string;
+  phoneNumber: string;
+  email: string;
+  location?: { latitude: number; longitude: number; address: string };
+  agentServices: Array<{
+    id: string;
+    serviceTemplateId: string;
+    serviceName: string;
+    categoryName: string;
+    pricePerUnit?: number;
+    formulaType?: string;
+    isActive: boolean;
+    hasFlexiblePricing: boolean;
+  }>;
+  totalServicesCount: number;
+  payStackSubAccountId?: string;
+  averageRating: number;
+  totalRatings: number;
+  status?: string;
+  activeDiscount?: unknown;
+  performanceTier?: unknown;
+  clerks?: unknown[];
+}
+
 export interface OrderItem {
   id: string;
   orderId: string;

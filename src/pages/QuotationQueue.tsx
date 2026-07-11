@@ -1,16 +1,24 @@
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { FileText } from 'lucide-react';
 import { quotationService, orderService, type Quotation } from '../services/superAdminService';
 import { LoadingSpinner } from '../components/LoadingSpinner';
 import { Layout } from '../components/Layout';
 import { Modal } from '../components/Modal';
+import { PageHeader } from '../components/ui/PageHeader';
+import { ListGroup, ListRow } from '../components/ui/ListGroup';
+import { Badge } from '../components/ui/Badge';
+import { Button } from '../components/ui/Button';
+import { FormField, iosInputCls } from '../components/ui/FormField';
 import type { Order } from '../types';
 
-const statusColors: Record<Quotation['status'], string> = {
-  PENDING: 'bg-yellow-100 text-yellow-700',
-  SENT: 'bg-blue-100 text-blue-700',
-  ACCEPTED: 'bg-green-100 text-green-700',
-  REJECTED: 'bg-red-100 text-red-700',
+type BadgeVariant = 'success' | 'neutral' | 'warning' | 'danger';
+
+const statusVariant: Record<Quotation['status'], BadgeVariant> = {
+  PENDING: 'warning',
+  SENT: 'neutral',
+  ACCEPTED: 'success',
+  REJECTED: 'danger',
 };
 
 export const QuotationQueue = () => {
@@ -47,16 +55,16 @@ export const QuotationQueue = () => {
   return (
     <Layout>
       <div>
-        <h1 className="text-2xl font-bold text-gray-900 mb-1">Quotation Queue</h1>
-        <p className="text-sm text-gray-500 mb-6">
-          Complex and custom orders waiting on a price from operations before the customer can pay.
-        </p>
+        <PageHeader
+          title="Quotation Queue"
+          subtitle="Complex and custom orders waiting on a price from operations before the customer can pay."
+        />
 
         <div className="flex gap-3 mb-4">
           <select
             value={statusFilter}
             onChange={(e) => setStatusFilter(e.target.value as Quotation['status'] | '')}
-            className="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-gray-900"
+            className={`max-w-xs ${iosInputCls}`}
           >
             <option value="">All</option>
             <option value="PENDING">Pending (needs a price)</option>
@@ -69,45 +77,33 @@ export const QuotationQueue = () => {
         {isLoading ? (
           <div className="flex justify-center py-16"><LoadingSpinner /></div>
         ) : (
-          <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
-            <table className="w-full text-sm">
-              <thead className="bg-gray-50 border-b border-gray-200">
-                <tr>
-                  <th className="text-left px-4 py-3 font-medium text-gray-500">Order</th>
-                  <th className="text-left px-4 py-3 font-medium text-gray-500">Kind</th>
-                  <th className="text-left px-4 py-3 font-medium text-gray-500">Status</th>
-                  <th className="text-right px-4 py-3 font-medium text-gray-500">Amount</th>
-                  <th className="text-left px-4 py-3 font-medium text-gray-500">Created</th>
-                  <th className="text-right px-4 py-3 font-medium text-gray-500">Actions</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-100">
-                {quotations.map((q) => (
-                  <tr key={q.id} className="hover:bg-gray-50">
-                    <td className="px-4 py-3 font-mono text-xs text-gray-600">#{q.orderId.slice(-8)}</td>
-                    <td className="px-4 py-3 text-gray-600 capitalize">{q.kind}</td>
-                    <td className="px-4 py-3">
-                      <span className={`inline-flex px-2 py-0.5 text-xs font-medium rounded-full ${statusColors[q.status]}`}>
-                        {q.status}
-                      </span>
-                    </td>
-                    <td className="px-4 py-3 text-right font-medium text-gray-900">
+          <ListGroup>
+            {quotations.map((q) => (
+              <ListRow
+                key={q.id}
+                onClick={() => openReview(q)}
+                leading={
+                  <div className="w-10 h-10 rounded-xl bg-brand/15 flex items-center justify-center">
+                    <FileText className="w-5 h-5 text-brand-hover" />
+                  </div>
+                }
+                title={`#${q.orderId.slice(-8)}`}
+                subtitle={`${q.kind} · ${new Date(q.createdAt).toLocaleDateString()}`}
+                trailing={
+                  <>
+                    <span className="text-sm font-medium text-ios-label">
                       {q.amount != null ? `GHS ${q.amount.toFixed(2)}` : '-'}
-                    </td>
-                    <td className="px-4 py-3 text-gray-500">{new Date(q.createdAt).toLocaleDateString()}</td>
-                    <td className="px-4 py-3 text-right">
-                      <button onClick={() => openReview(q)} className="text-sm text-gray-600 hover:text-gray-900">
-                        {q.status === 'PENDING' ? 'Price & Send' : 'Review'}
-                      </button>
-                    </td>
-                  </tr>
-                ))}
-                {quotations.length === 0 && (
-                  <tr><td colSpan={6} className="px-4 py-12 text-center text-gray-400">No quotations found</td></tr>
-                )}
-              </tbody>
-            </table>
-          </div>
+                    </span>
+                    <Badge variant={statusVariant[q.status]}>{q.status}</Badge>
+                  </>
+                }
+                chevron
+              />
+            ))}
+            {quotations.length === 0 && (
+              <div className="px-4 py-12 text-center text-ios-gray">No quotations found</div>
+            )}
+          </ListGroup>
         )}
 
         <Modal isOpen={!!reviewing} onClose={() => setReviewing(null)} title="Review Quotation" size="large">
@@ -126,45 +122,45 @@ export const QuotationQueue = () => {
 
               {order?.comment && (
                 <div>
-                  <p className="text-xs font-medium text-gray-500 mb-1">Customer's description</p>
-                  <p className="text-sm text-gray-800 bg-gray-50 rounded-lg p-3 whitespace-pre-wrap">{order.comment}</p>
+                  <p className="text-xs font-medium text-ios-secondary-label mb-1">Customer's description</p>
+                  <p className="text-sm text-ios-label bg-ios-gray6 rounded-ios p-3 whitespace-pre-wrap">{order.comment}</p>
                 </div>
               )}
 
               {reviewing.aiSummary && (
                 <div>
-                  <p className="text-xs font-medium text-gray-500 mb-1">AI summary</p>
-                  <p className="text-sm text-gray-800 bg-gray-50 rounded-lg p-3 whitespace-pre-wrap">{reviewing.aiSummary}</p>
+                  <p className="text-xs font-medium text-ios-secondary-label mb-1">AI summary</p>
+                  <p className="text-sm text-ios-label bg-ios-gray6 rounded-ios p-3 whitespace-pre-wrap">{reviewing.aiSummary}</p>
                 </div>
               )}
               {!reviewing.aiSummary && (
-                <p className="text-xs text-gray-400 italic">No AI summary yet — pricing is manual for now.</p>
+                <p className="text-xs text-ios-gray italic">No AI summary yet — pricing is manual for now.</p>
               )}
 
-              <div className="border border-gray-200 rounded-lg p-4 space-y-2 bg-gray-50">
-                <label className="text-xs font-medium text-gray-500 block">Quoted price (GHS)</label>
-                <div className="flex gap-2">
-                  <input
-                    type="number"
-                    min="0"
-                    step="0.01"
-                    value={amountDraft}
-                    onChange={(e) => setAmountDraft(e.target.value)}
-                    placeholder="0.00"
-                    className="flex-1 px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-gray-900"
-                  />
-                  <button
-                    onClick={() => {
-                      const amount = Number(amountDraft);
-                      if (amount > 0) sendMutation.mutate({ id: reviewing.id, amount });
-                    }}
-                    disabled={!amountDraft || Number(amountDraft) <= 0 || sendMutation.isPending}
-                    className="px-4 py-2 bg-gray-900 text-white text-sm font-medium rounded-lg disabled:opacity-40"
-                  >
-                    {sendMutation.isPending ? 'Sending…' : 'Send to customer'}
-                  </button>
-                </div>
-                <p className="text-xs text-gray-400">
+              <div className="border border-ios-gray5 rounded-ios p-4 space-y-2 bg-ios-gray6">
+                <FormField label="Quoted price (GHS)">
+                  <div className="flex gap-2">
+                    <input
+                      type="number"
+                      min="0"
+                      step="0.01"
+                      value={amountDraft}
+                      onChange={(e) => setAmountDraft(e.target.value)}
+                      placeholder="0.00"
+                      className={`flex-1 ${iosInputCls}`}
+                    />
+                    <Button
+                      onClick={() => {
+                        const amount = Number(amountDraft);
+                        if (amount > 0) sendMutation.mutate({ id: reviewing.id, amount });
+                      }}
+                      disabled={!amountDraft || Number(amountDraft) <= 0 || sendMutation.isPending}
+                    >
+                      {sendMutation.isPending ? 'Sending…' : 'Send to customer'}
+                    </Button>
+                  </div>
+                </FormField>
+                <p className="text-xs text-ios-gray">
                   Sending notifies the customer and moves the order to Quoted — they pay once they accept.
                 </p>
               </div>
@@ -178,7 +174,7 @@ export const QuotationQueue = () => {
 
 const Field = ({ label, value }: { label: string; value: string }) => (
   <div>
-    <p className="text-xs font-medium text-gray-500">{label}</p>
-    <p className="text-sm text-gray-800">{value}</p>
+    <p className="text-xs font-medium text-ios-secondary-label">{label}</p>
+    <p className="text-sm text-ios-label">{value}</p>
   </div>
 );
