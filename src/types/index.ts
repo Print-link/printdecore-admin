@@ -165,7 +165,19 @@ export interface Subscription {
   updatedAt: string;
 }
 
-export type OrderStatus = 'PENDING' | 'QUOTED' | 'PAID' | 'RECEIVED' | 'IN_PROGRESS' | 'COMPLETED';
+export type OrderStatus =
+  | 'PENDING'
+  | 'QUOTED'
+  | 'PAID'
+  | 'RECEIVED'
+  | 'IN_PROGRESS'
+  | 'PRINTING'
+  | 'QUALITY_CHECK'
+  | 'READY_FOR_PICKUP'
+  | 'OUT_FOR_DELIVERY'
+  | 'DELIVERED'
+  | 'COMPLETED'
+  | 'CANCELLED';
 
 export interface Order {
   id: string;
@@ -181,10 +193,70 @@ export interface Order {
   currency?: string;
   paymentReference?: string;
   commissionAmount?: number;
-  notes?: string;
+  /** Customer's own comment/description on the order (backend field: comment). */
+  comment?: string;
+  /** Ops-only production partner assignment — never shown to the customer. */
+  assignedVendorId?: string;
+  /** Ops-only internal note — never shown to the customer. */
+  internalNotes?: string;
   items?: OrderItem[];
   createdAt: string;
   updatedAt: string;
+}
+
+// Service catalogue — the customer-facing menu Printdecore prices and manages.
+export interface ServiceCategory {
+  id: string;
+  name: string;
+  description?: string;
+  imageUrl?: string;
+  branchId?: string;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+export type PricingType = 'AREA_BASED' | 'UNIT_BASED' | 'MIXED' | 'CUSTOM_QUOTE';
+
+export interface ServiceSubCategory {
+  id: string;
+  categoryId: string;
+  name: string;
+  description?: string;
+  imageUrl?: string;
+  pricingType: PricingType;
+  branchId?: string;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+export type FormulaType = 'AREA_FEET' | 'AREA_INCH' | 'UNIT_ONLY' | 'AREA_OR_UNIT' | 'PAGE_BASED';
+
+export interface PricingFormula {
+  id: string;
+  code: string;
+  description?: string;
+  formulaType: FormulaType;
+  defaultConstant: number;
+}
+
+export interface ServiceTemplate {
+  id: string;
+  subCategoryId: string;
+  name: string;
+  measurementUnit: 'FEET' | 'INCH' | 'UNIT';
+  allowsCustomSize: boolean;
+  supportsFrontBack: boolean;
+  supportsColor: boolean;
+  supportsPrintCut: boolean;
+  pricingFormulaId: string;
+  branchId?: string;
+  /** The single, ops-set CUSTOMER price for this service — never a vendor's own rate. */
+  pricePerUnit?: number;
+  constant?: number;
+  colorPriceModifier?: number;
+  isActive: boolean;
+  createdAt?: string;
+  updatedAt?: string;
 }
 
 export interface OrderItem {

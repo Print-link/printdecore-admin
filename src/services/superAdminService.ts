@@ -11,10 +11,15 @@ import type {
   Plan,
   Subscription,
   Order,
+  OrderStatus,
   ActivityLog,
   Role,
   Permission,
   RevenueReport,
+  ServiceCategory,
+  ServiceSubCategory,
+  ServiceTemplate,
+  PricingFormula,
 } from '../types';
 
 // Auth
@@ -269,6 +274,48 @@ export const orderService = {
     const response = await api.get<{ success: boolean; data: Order }>(`/orders/${id}`);
     return response.data.data;
   },
+  updateStatus: async (id: string, status: OrderStatus, note?: string) => {
+    const response = await api.put<{ success: boolean; data: Order }>(`/orders/${id}`, { status, note });
+    return response.data.data;
+  },
+  assignVendor: async (id: string, vendorId: string) => {
+    const response = await api.patch<{ success: boolean; data: Order }>(`/orders/${id}/assign-vendor`, { vendorId });
+    return response.data.data;
+  },
+  updateNotes: async (id: string, note: string) => {
+    const response = await api.patch<{ success: boolean; data: Order }>(`/orders/${id}/notes`, { note });
+    return response.data.data;
+  },
+  getTimeline: async (id: string) => {
+    const response = await api.get<{ success: boolean; data: { id: string; status: string; note?: string; createdAt: string }[] }>(`/orders/${id}/timeline`);
+    return response.data.data;
+  },
+};
+
+// Quotations — complex/custom orders awaiting an ops-prepared price
+export interface Quotation {
+  id: string;
+  orderId: string;
+  kind: 'standard' | 'complex';
+  amount?: number;
+  aiSummary?: string;
+  preparedBy?: string;
+  status: 'PENDING' | 'SENT' | 'ACCEPTED' | 'REJECTED';
+  sentAt?: string;
+  acceptedAt?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export const quotationService = {
+  getAll: async (status?: Quotation['status']) => {
+    const response = await api.get<{ success: boolean; data: Quotation[] }>('/quotations', { params: status ? { status } : undefined });
+    return response.data.data || [];
+  },
+  send: async (id: string, amount: number) => {
+    const response = await api.patch<{ success: boolean; data: Quotation }>(`/quotations/${id}/send`, { amount });
+    return response.data.data;
+  },
 };
 
 // Activity Logs
@@ -433,6 +480,83 @@ export const blogService = {
   },
   delete: async (id: string) => {
     const response = await api.delete<{ success: boolean }>(`/blog/${id}`);
+    return response.data;
+  },
+};
+
+// Service Catalogue — Categories, Sub-categories, Service Templates, Pricing Formulas
+export const categoryService = {
+  getAll: async () => {
+    const response = await api.get<{ success: boolean; data: ServiceCategory[] }>('/categories');
+    return response.data.data || [];
+  },
+  create: async (data: FormData) => {
+    const response = await api.post<{ success: boolean; data: ServiceCategory }>('/categories', data, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    });
+    return response.data.data;
+  },
+  update: async (id: string, data: FormData) => {
+    const response = await api.put<{ success: boolean; data: ServiceCategory }>(`/categories/${id}`, data, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    });
+    return response.data.data;
+  },
+  delete: async (id: string) => {
+    const response = await api.delete<{ success: boolean }>(`/categories/${id}`);
+    return response.data;
+  },
+};
+
+export const subCategoryService = {
+  getAll: async (categoryId?: string) => {
+    const response = await api.get<{ success: boolean; data: ServiceSubCategory[] }>('/sub-categories', {
+      params: categoryId ? { categoryId } : undefined,
+    });
+    return response.data.data || [];
+  },
+  create: async (data: FormData) => {
+    const response = await api.post<{ success: boolean; data: ServiceSubCategory }>('/sub-categories', data, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    });
+    return response.data.data;
+  },
+  update: async (id: string, data: FormData) => {
+    const response = await api.put<{ success: boolean; data: ServiceSubCategory }>(`/sub-categories/${id}`, data, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    });
+    return response.data.data;
+  },
+  delete: async (id: string) => {
+    const response = await api.delete<{ success: boolean }>(`/sub-categories/${id}`);
+    return response.data;
+  },
+};
+
+export const pricingFormulaService = {
+  getAll: async () => {
+    const response = await api.get<{ success: boolean; data: PricingFormula[] }>('/pricing-formulas');
+    return response.data.data || [];
+  },
+};
+
+export const serviceTemplateService = {
+  getAll: async (subCategoryId?: string) => {
+    const response = await api.get<{ success: boolean; data: ServiceTemplate[] }>('/service-templates', {
+      params: subCategoryId ? { subCategoryId } : undefined,
+    });
+    return response.data.data || [];
+  },
+  create: async (data: Partial<ServiceTemplate>) => {
+    const response = await api.post<{ success: boolean; data: ServiceTemplate }>('/service-templates', data);
+    return response.data.data;
+  },
+  update: async (id: string, data: Partial<ServiceTemplate>) => {
+    const response = await api.put<{ success: boolean; data: ServiceTemplate }>(`/service-templates/${id}`, data);
+    return response.data.data;
+  },
+  delete: async (id: string) => {
+    const response = await api.delete<{ success: boolean }>(`/service-templates/${id}`);
     return response.data;
   },
 };
