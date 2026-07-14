@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import toast from 'react-hot-toast';
-import { FolderOpen, Layers, MoreVertical } from 'lucide-react';
+import { FolderOpen, Layers, MoreVertical, SlidersHorizontal } from 'lucide-react';
 import {
   categoryService,
   subCategoryService,
@@ -11,6 +11,7 @@ import {
 import { LoadingSpinner } from '../components/LoadingSpinner';
 import { Layout } from '../components/Layout';
 import { Modal } from '../components/Modal';
+import { PricingConfigEditor } from '../components/PricingConfigEditor';
 import { PageHeader } from '../components/ui/PageHeader';
 import { ListGroup, ListRow } from '../components/ui/ListGroup';
 import { Badge } from '../components/ui/Badge';
@@ -316,6 +317,7 @@ function TemplatesTab() {
   const [modalOpen, setModalOpen] = useState(false);
   const [editing, setEditing] = useState<ServiceTemplate | null>(null);
   const [openMenuId, setOpenMenuId] = useState<string | null>(null);
+  const [configuring, setConfiguring] = useState<ServiceTemplate | null>(null);
 
   const { data: subCategories = [] } = useQuery({ queryKey: ['sub-categories'], queryFn: () => subCategoryService.getAll() });
   const { data: formulas = [] } = useQuery({ queryKey: ['pricing-formulas'], queryFn: pricingFormulaService.getAll });
@@ -390,11 +392,20 @@ function TemplatesTab() {
                 <Layers className="w-4 h-4 text-brand-hover" />
               </div>
               <div className="flex-1 min-w-0">
-                <p className="text-sm font-medium text-ios-label truncate">{t.name}</p>
+                <div className="flex items-center gap-1.5">
+                  <p className="text-sm font-medium text-ios-label truncate">{t.name}</p>
+                  {!!t.pricingConfig?.baseConfigurations?.length && <Badge variant="warning">Flexible</Badge>}
+                </div>
                 <p className="text-xs text-ios-secondary-label truncate mt-0.5">{subCategoryName(t.subCategoryId)}</p>
               </div>
               <div className="shrink-0 text-sm text-ios-label">
-                {t.pricePerUnit != null ? `GHS ${t.pricePerUnit.toFixed(2)}` : <span className="text-ios-orange text-xs">Not set</span>}
+                {t.pricingConfig?.baseConfigurations?.length ? (
+                  `From GHS ${Math.min(...t.pricingConfig.baseConfigurations.map((bc) => bc.unitPrice)).toFixed(2)}`
+                ) : t.pricePerUnit != null ? (
+                  `GHS ${t.pricePerUnit.toFixed(2)}`
+                ) : (
+                  <span className="text-ios-orange text-xs">Not set</span>
+                )}
               </div>
               <Switch checked={t.isActive} onChange={() => toggleActiveMutation.mutate({ id: t.id, isActive: !t.isActive })} />
               <div className="relative shrink-0">
@@ -407,7 +418,13 @@ function TemplatesTab() {
                   <MoreVertical className="w-4 h-4" />
                 </button>
                 {openMenuId === t.id && (
-                  <div className="absolute right-0 mt-1 w-32 bg-white rounded-ios shadow-ios border border-ios-gray5 py-1 z-10">
+                  <div className="absolute right-0 mt-1 w-40 bg-white rounded-ios shadow-ios border border-ios-gray5 py-1 z-10">
+                    <button
+                      onClick={() => { setConfiguring(t); setOpenMenuId(null); }}
+                      className="w-full flex items-center gap-2 text-left px-3 py-1.5 text-sm text-ios-label hover:bg-ios-gray6"
+                    >
+                      <SlidersHorizontal className="w-3.5 h-3.5" /> Configure Pricing
+                    </button>
                     <button onClick={() => { openEdit(t); setOpenMenuId(null); }} className="w-full text-left px-3 py-1.5 text-sm text-ios-label hover:bg-ios-gray6">Edit</button>
                     <button
                       onClick={() => { if (confirm(`Delete "${t.name}"?`)) deleteMutation.mutate(t.id); setOpenMenuId(null); }}
@@ -495,6 +512,10 @@ function TemplatesTab() {
           </Button>
         </form>
       </Modal>
+
+      {configuring && (
+        <PricingConfigEditor template={configuring} isOpen onClose={() => setConfiguring(null)} />
+      )}
     </div>
   );
 }

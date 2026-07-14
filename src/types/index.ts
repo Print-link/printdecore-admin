@@ -239,6 +239,39 @@ export interface PricingFormula {
   defaultConstant: number;
 }
 
+// Scalable, self-service pricing config — a service can define multiple size/base
+// presets (or a custom size), a repeatable list of add-on options (one may be the
+// default), and free-form custom specifications, each with their own price.
+export type BaseConfigurationType = 'PRESET' | 'CUSTOM';
+
+export interface BaseConfiguration {
+  id: string;
+  name: string;
+  type: BaseConfigurationType;
+  unitPrice: number;
+  customValue?: string | null;
+}
+
+export interface PricingOption {
+  id: string;
+  name: string;
+  enabled: boolean;
+  default: boolean;
+  priceModifier: number;
+}
+
+export interface CustomSpecification {
+  id: string;
+  name: string;
+  priceModifier: number;
+}
+
+export interface PricingConfig {
+  baseConfigurations: BaseConfiguration[];
+  options: PricingOption[];
+  customSpecifications: CustomSpecification[];
+}
+
 export interface ServiceTemplate {
   id: string;
   subCategoryId: string;
@@ -254,6 +287,8 @@ export interface ServiceTemplate {
   pricePerUnit?: number;
   constant?: number;
   colorPriceModifier?: number;
+  /** Scalable customizable pricing — presets/options/custom specs, in place of a single flat price. */
+  pricingConfig?: PricingConfig | null;
   isActive: boolean;
   createdAt?: string;
   updatedAt?: string;
@@ -273,7 +308,7 @@ export interface AgentService {
   supportsFrontBack: boolean;
   supportsFrontOnly: boolean;
   formulaType?: FormulaType;
-  pricingConfig?: Record<string, unknown>;
+  pricingConfig?: PricingConfig | null;
   serviceName?: string;
   createdAt?: string;
   updatedAt?: string;

@@ -22,6 +22,7 @@ import type {
   PricingFormula,
   AgentService,
   BranchDetailResponse,
+  PricingConfig,
 } from '../types';
 
 // Auth
@@ -594,7 +595,7 @@ export const agentServiceService = {
     const response = await api.put<{ success: boolean; data: AgentService }>(`/agent-services/${id}`, data);
     return response.data.data;
   },
-  updatePricingConfig: async (id: string, pricingConfig: Record<string, unknown>) => {
+  updatePricingConfig: async (id: string, pricingConfig: PricingConfig) => {
     const response = await api.put<{ success: boolean; data: AgentService }>(`/agent-services/${id}/pricing-config`, { pricingConfig });
     return response.data.data;
   },
