@@ -14,7 +14,7 @@ export const ListGroup = ({
     {title && (
       <p className="px-3.5 mb-1 text-xs font-semibold text-ios-secondary-label uppercase tracking-wide">{title}</p>
     )}
-    <div className="bg-white rounded-ios shadow-ios divide-y divide-ios-gray5 overflow-hidden">{children}</div>
+    <div className="bg-white rounded-ios shadow-ios divide-y divide-ios-gray5 [&>*:first-child]:rounded-t-ios [&>*:last-child]:rounded-b-ios">{children}</div>
     {footer && <p className="px-3.5 mt-1 text-xs text-ios-secondary-label">{footer}</p>}
   </div>
 );

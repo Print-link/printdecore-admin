@@ -1,25 +1,24 @@
 import { useState } from 'react';
-import { useMutation, useQueryClient } from '@tanstack/react-query';
 import toast from 'react-hot-toast';
-import { X, Plus, Trash2, ChevronDown, ChevronRight, Star } from 'lucide-react';
-import { serviceTemplateService } from '../services/superAdminService';
+import { X, Plus, Trash2, ChevronDown, ChevronRight, Star, FlaskConical } from 'lucide-react';
 import { Modal } from './Modal';
+import { PricingSimulator } from './PricingSimulator';
 import { Button } from './ui/Button';
 import { Badge } from './ui/Badge';
 import { FormField, iosInputCls } from './ui/FormField';
-import type { ServiceTemplate, PricingConfig, BaseConfiguration, PricingOption, CustomSpecification, BaseConfigurationType } from '../types';
+import type { PricingConfig, BaseConfiguration, PricingOption, CustomSpecification, BaseConfigurationType } from '../types';
 
-const defaultConfigFor = (template: ServiceTemplate): PricingConfig => {
-  if (template.pricingConfig) {
+const defaultConfigFor = (initialConfig: PricingConfig | null | undefined, fallbackPrice: number | undefined): PricingConfig => {
+  if (initialConfig) {
     return {
-      baseConfigurations: template.pricingConfig.baseConfigurations || [],
-      options: template.pricingConfig.options || [],
-      customSpecifications: template.pricingConfig.customSpecifications || [],
+      baseConfigurations: initialConfig.baseConfigurations || [],
+      options: initialConfig.options || [],
+      customSpecifications: initialConfig.customSpecifications || [],
     };
   }
   return {
-    baseConfigurations: template.pricePerUnit != null
-      ? [{ id: `config_${Date.now()}`, name: 'Standard', type: 'PRESET', unitPrice: template.pricePerUnit }]
+    baseConfigurations: fallbackPrice != null
+      ? [{ id: `config_${Date.now()}`, name: 'Standard', type: 'PRESET', unitPrice: fallbackPrice }]
       : [],
     options: [],
     customSpecifications: [],
@@ -27,31 +26,24 @@ const defaultConfigFor = (template: ServiceTemplate): PricingConfig => {
 };
 
 interface PricingConfigEditorProps {
-  template: ServiceTemplate;
+  title: string;
+  subtitle?: string;
+  initialConfig?: PricingConfig | null;
+  fallbackPrice?: number;
   isOpen: boolean;
+  isSaving?: boolean;
   onClose: () => void;
+  onSave: (config: PricingConfig, activate: boolean) => void;
 }
 
-export const PricingConfigEditor = ({ template, isOpen, onClose }: PricingConfigEditorProps) => {
-  const queryClient = useQueryClient();
-  const [config, setConfig] = useState<PricingConfig>(() => defaultConfigFor(template));
+export const PricingConfigEditor = ({ title, subtitle, initialConfig, fallbackPrice, isOpen, isSaving, onClose, onSave }: PricingConfigEditorProps) => {
+  const [config, setConfig] = useState<PricingConfig>(() => defaultConfigFor(initialConfig, fallbackPrice));
   const [optionsOpen, setOptionsOpen] = useState(false);
   const [customSpecsOpen, setCustomSpecsOpen] = useState(false);
   const [addBaseConfigOpen, setAddBaseConfigOpen] = useState(false);
   const [addOptionOpen, setAddOptionOpen] = useState(false);
   const [addCustomSpecOpen, setAddCustomSpecOpen] = useState(false);
-
-  if (!isOpen) return null;
-
-  const saveMutation = useMutation({
-    mutationFn: (data: Partial<ServiceTemplate>) => serviceTemplateService.update(template.id, data),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['service-templates'] });
-      toast.success('Pricing saved');
-      onClose();
-    },
-    onError: (e: any) => toast.error(e.response?.data?.message || 'Failed to save pricing'),
-  });
+  const [simulateOpen, setSimulateOpen] = useState(false);
 
   const validate = (): string | null => {
     if (config.baseConfigurations.length === 0) return 'Add at least one base configuration';
@@ -64,7 +56,7 @@ export const PricingConfigEditor = ({ template, isOpen, onClose }: PricingConfig
   const handleSave = (activate: boolean) => {
     const error = validate();
     if (error) { toast.error(error); return; }
-    saveMutation.mutate({ pricingConfig: config, ...(activate ? { isActive: true } : {}) });
+    onSave(config, activate);
   };
 
   const addBaseConfig = (cfg: BaseConfiguration) => {
@@ -114,12 +106,14 @@ export const PricingConfigEditor = ({ template, isOpen, onClose }: PricingConfig
     setConfig((c) => ({ ...c, customSpecifications: c.customSpecifications.filter((_, i) => i !== index) }));
   };
 
+  if (!isOpen) return null;
+
   return (
     <div className="fixed inset-0 z-50 bg-ios-grouped-bg flex flex-col">
       <div className="flex items-center justify-between px-6 py-4 border-b border-ios-gray5 bg-white shrink-0">
         <div>
-          <p className="text-xs text-ios-secondary-label">Pricing configuration</p>
-          <h2 className="text-lg font-semibold text-ios-label">{template.name}</h2>
+          <p className="text-xs text-ios-secondary-label">{subtitle || 'Pricing configuration'}</p>
+          <h2 className="text-lg font-semibold text-ios-label">{title}</h2>
         </div>
         <button onClick={onClose} className="w-8 h-8 flex items-center justify-center rounded-full bg-ios-gray6 text-ios-secondary-label hover:bg-ios-gray5">
           <X className="w-4 h-4" />
@@ -318,19 +312,28 @@ export const PricingConfigEditor = ({ template, isOpen, onClose }: PricingConfig
                 </div>
               )}
             </div>
+            <Button
+              variant="secondary"
+              disabled={config.baseConfigurations.length === 0}
+              onClick={() => setSimulateOpen(true)}
+              className="w-full justify-center mt-3"
+            >
+              <FlaskConical className="w-3.5 h-3.5" /> Simulate
+            </Button>
           </div>
         </div>
       </div>
 
       <div className="flex items-center justify-end gap-3 px-6 py-4 border-t border-ios-gray5 bg-white shrink-0">
         <Button variant="secondary" onClick={onClose}>Discard</Button>
-        <Button variant="secondary" disabled={saveMutation.isPending} onClick={() => handleSave(false)}>Save Draft</Button>
-        <Button disabled={saveMutation.isPending} onClick={() => handleSave(true)}>Save &amp; Activate</Button>
+        <Button variant="secondary" disabled={isSaving} onClick={() => handleSave(false)}>Save Draft</Button>
+        <Button disabled={isSaving} onClick={() => handleSave(true)}>Save &amp; Activate</Button>
       </div>
 
       <AddBaseConfigDialog isOpen={addBaseConfigOpen} onClose={() => setAddBaseConfigOpen(false)} onAdd={addBaseConfig} />
       <AddOptionDialog isOpen={addOptionOpen} onClose={() => setAddOptionOpen(false)} onAdd={addOption} />
       <AddCustomSpecDialog isOpen={addCustomSpecOpen} onClose={() => setAddCustomSpecOpen(false)} onAdd={addCustomSpec} />
+      <PricingSimulator config={config} isOpen={simulateOpen} onClose={() => setSimulateOpen(false)} />
     </div>
   );
 };

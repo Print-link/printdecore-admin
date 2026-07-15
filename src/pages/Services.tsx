@@ -348,6 +348,11 @@ function TemplatesTab() {
     onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['service-templates'] }); },
     onError: (e: any) => toast.error(e.response?.data?.message || 'Failed to update service'),
   });
+  const savePricingMutation = useMutation({
+    mutationFn: ({ id, data }: { id: string; data: Partial<ServiceTemplate> }) => serviceTemplateService.update(id, data),
+    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['service-templates'] }); toast.success('Pricing saved'); setConfiguring(null); },
+    onError: (e: any) => toast.error(e.response?.data?.message || 'Failed to save pricing'),
+  });
 
   const openCreate = () => { setEditing(null); setModalOpen(true); };
   const openEdit = (t: ServiceTemplate) => { setEditing(t); setModalOpen(true); };
@@ -385,7 +390,7 @@ function TemplatesTab() {
       {isLoading ? (
         <div className="flex justify-center py-16"><LoadingSpinner /></div>
       ) : (
-        <div className="bg-white rounded-ios shadow-ios divide-y divide-ios-gray5 overflow-hidden">
+        <div className="bg-white rounded-ios shadow-ios divide-y divide-ios-gray5 [&>*:first-child]:rounded-t-ios [&>*:last-child]:rounded-b-ios">
           {templates.map((t) => (
             <div key={t.id} className="flex items-center gap-3 px-3.5 py-2.5">
               <div className="w-9 h-9 rounded-xl bg-brand/15 flex items-center justify-center shrink-0">
@@ -514,7 +519,18 @@ function TemplatesTab() {
       </Modal>
 
       {configuring && (
-        <PricingConfigEditor template={configuring} isOpen onClose={() => setConfiguring(null)} />
+        <PricingConfigEditor
+          title={configuring.name}
+          initialConfig={configuring.pricingConfig}
+          fallbackPrice={configuring.pricePerUnit}
+          isOpen
+          isSaving={savePricingMutation.isPending}
+          onClose={() => setConfiguring(null)}
+          onSave={(config, activate) => savePricingMutation.mutate({
+            id: configuring.id,
+            data: { pricingConfig: config, ...(activate ? { isActive: true } : {}) },
+          })}
+        />
       )}
     </div>
   );
