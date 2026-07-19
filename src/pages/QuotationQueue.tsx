@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { FileText } from 'lucide-react';
-import { quotationService, orderService, type Quotation } from '../services/superAdminService';
+import { quotationService, orderService, branchService, type Quotation } from '../services/superAdminService';
 import { LoadingSpinner } from '../components/LoadingSpinner';
 import { Layout } from '../components/Layout';
 import { Modal } from '../components/Modal';
@@ -38,6 +38,12 @@ export const QuotationQueue = () => {
     enabled: !!reviewing,
   });
 
+  const { data: branches } = useQuery({
+    queryKey: ['branches', 'for-reassignment'],
+    queryFn: () => branchService.getAll({ limit: 500 }),
+    enabled: !!reviewing,
+  });
+
   const sendMutation = useMutation({
     mutationFn: ({ id, amount }: { id: string; amount: number }) => quotationService.send(id, amount),
     onSuccess: () => {
@@ -47,9 +53,19 @@ export const QuotationQueue = () => {
     },
   });
 
+  const reassignMutation = useMutation({
+    mutationFn: ({ id, branchId }: { id: string; branchId: string }) => orderService.reassignBranch(id, branchId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['order', reviewing?.orderId] });
+    },
+  });
+
+  const [branchDraft, setBranchDraft] = useState('');
+
   const openReview = (quotation: Quotation) => {
     setReviewing(quotation);
     setAmountDraft(quotation.amount ? String(quotation.amount) : '');
+    setBranchDraft('');
   };
 
   return (
@@ -57,7 +73,7 @@ export const QuotationQueue = () => {
       <div>
         <PageHeader
           title="Quotation Queue"
-          subtitle="Complex and custom orders waiting on a price from operations before the customer can pay."
+          subtitle="Orders waiting on operations to confirm vendor availability and a final price before the customer can pay."
         />
 
         <div className="flex gap-3 mb-4">
@@ -115,10 +131,40 @@ export const QuotationQueue = () => {
                 <div className="grid grid-cols-2 gap-4">
                   <Field label="Customer" value={order.customerName || order.customerEmail || '-'} />
                   <Field label="Phone" value={order.customerPhone || '-'} />
-                  <Field label="Branch" value={order.branchName || order.branchId} />
                   <Field label="Order Status" value={order.status} />
                 </div>
               ) : null}
+
+              {order && (
+                <div className="border border-ios-gray5 rounded-ios p-4 space-y-2 bg-ios-gray6">
+                  <FormField label={`Branch (currently: ${order.branchName || order.branchId})`}>
+                    <div className="flex gap-2">
+                      <select
+                        value={branchDraft}
+                        onChange={(e) => setBranchDraft(e.target.value)}
+                        className={`flex-1 ${iosInputCls}`}
+                      >
+                        <option value="">Keep current branch</option>
+                        {branches?.branches
+                          .filter((b) => b.id !== order.branchId)
+                          .map((b) => (
+                            <option key={b.id} value={b.id}>{b.name}</option>
+                          ))}
+                      </select>
+                      <Button
+                        variant="secondary"
+                        onClick={() => branchDraft && reassignMutation.mutate({ id: order.id, branchId: branchDraft })}
+                        disabled={!branchDraft || reassignMutation.isPending}
+                      >
+                        {reassignMutation.isPending ? 'Reassigning…' : 'Reassign'}
+                      </Button>
+                    </div>
+                  </FormField>
+                  <p className="text-xs text-ios-gray">
+                    Use this if the original vendor isn't available and a different one confirmed instead.
+                  </p>
+                </div>
+              )}
 
               {order?.comment && (
                 <div>

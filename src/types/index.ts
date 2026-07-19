@@ -169,6 +169,7 @@ export type OrderStatus =
   | 'PENDING'
   | 'QUOTED'
   | 'PAID'
+  | 'CONFIRMING_AVAILABILITY'
   | 'RECEIVED'
   | 'IN_PROGRESS'
   | 'PRINTING'

@@ -289,6 +289,10 @@ export const orderService = {
     const response = await api.patch<{ success: boolean; data: Order }>(`/orders/${id}/assign-vendor`, { vendorId });
     return response.data.data;
   },
+  reassignBranch: async (id: string, branchId: string) => {
+    const response = await api.patch<{ success: boolean; data: Order }>(`/orders/${id}/reassign-branch`, { branchId });
+    return response.data.data;
+  },
   updateNotes: async (id: string, note: string) => {
     const response = await api.patch<{ success: boolean; data: Order }>(`/orders/${id}/notes`, { note });
     return response.data.data;

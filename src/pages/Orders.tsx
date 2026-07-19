@@ -17,6 +17,7 @@ const statusVariant: Record<OrderStatus, BadgeVariant> = {
   PENDING: 'warning',
   QUOTED: 'neutral',
   PAID: 'success',
+  CONFIRMING_AVAILABILITY: 'warning',
   RECEIVED: 'neutral',
   IN_PROGRESS: 'warning',
   PRINTING: 'warning',
@@ -29,7 +30,7 @@ const statusVariant: Record<OrderStatus, BadgeVariant> = {
 };
 
 const ALL_STATUSES: OrderStatus[] = [
-  'PENDING', 'QUOTED', 'PAID', 'RECEIVED', 'IN_PROGRESS', 'PRINTING',
+  'PENDING', 'QUOTED', 'PAID', 'CONFIRMING_AVAILABILITY', 'RECEIVED', 'IN_PROGRESS', 'PRINTING',
   'QUALITY_CHECK', 'READY_FOR_PICKUP', 'OUT_FOR_DELIVERY', 'DELIVERED',
   'COMPLETED', 'CANCELLED',
 ];
