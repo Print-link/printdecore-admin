@@ -1,0 +1,465 @@
+# Claude Code Skill: Replace Generic Order Data with Human-Readable Data
+
+## Objective
+
+Your task is to improve the Orders module across the entire application so that users, branch staff, and administrators never see raw database IDs or meaningless placeholder values.
+
+The backend project is located at:
+
+`/Users/bernardbaah/Documents/printdecore-backend`
+
+Analyze the entire backend and update every endpoint related to orders so responses are human-readable, well structured, and ready for production.
+
+---
+
+# Requirements
+
+## 1. Remove Raw IDs from User-Facing Responses
+
+Wherever the API returns fields like:
+
+* branchId
+* userId
+* orderId (internal database id)
+* serviceId
+* categoryId
+* subcategoryId
+* createdBy
+* updatedBy
+* paymentId
+* transactionId
+* quotationId
+
+replace them with meaningful information.
+
+Instead of:
+
+```json
+{
+  "branchId": "686fdcbcd1a83f3...",
+  "serviceId": "686ab91df...",
+  "userId": "6845fd6..."
+}
+```
+
+Return something like:
+
+```json
+{
+  "branch": {
+    "name": "Print Hub - East Legon",
+    "city": "Accra",
+    "phone": "+233 24 XXX XXXX"
+  },
+  "service": {
+    "name": "Banner Printing"
+  },
+  "customer": {
+    "name": "Kwame Mensah"
+  }
+}
+```
+
+IDs may still exist internally but must never be the primary information displayed by the frontend.
+
+---
+
+# 2. Replace Generic Dates
+
+Avoid dates like:
+
+```
+01/02/2026
+```
+
+Return readable formats.
+
+Examples:
+
+```
+1 Feb 2026
+Today, 2:35 PM
+Yesterday, 10:12 AM
+18 Jul 2026 • 9:40 AM
+```
+
+Include both:
+
+* formatted date
+* ISO timestamp (for sorting)
+
+Example
+
+```json
+{
+    "createdAt": "2026-02-01T10:32:00Z",
+    "createdAtFormatted": "1 Feb 2026"
+}
+```
+
+---
+
+# 3. Replace Generic Status Information
+
+Instead of
+
+```json
+status: "PENDING"
+```
+
+Return
+
+```json
+status: {
+    code: "PENDING",
+    label: "Awaiting Review",
+    color: "warning"
+}
+```
+
+Example mappings
+
+Pending
+
+Awaiting Review
+
+Accepted
+
+Accepted
+
+Quoted
+
+Quotation Ready
+
+Printing
+
+In Production
+
+Ready
+
+Ready for Pickup
+
+Completed
+
+Completed Successfully
+
+Cancelled
+
+Cancelled
+
+Rejected
+
+Rejected
+
+---
+
+# 4. Human Readable Order Numbers
+
+Instead of exposing Mongo IDs:
+
+```
+687af82adca...
+```
+
+Use order numbers like
+
+```
+PD-2026-000145
+
+PD-ACC-00452
+
+PRINT-10425
+```
+
+If an order number already exists, always return that instead of _id.
+
+---
+
+# 5. Customer Information
+
+Return
+
+```json
+customer: {
+    fullName,
+    email,
+    phone,
+    avatar
+}
+```
+
+Instead of
+
+```
+customerId
+```
+
+---
+
+# 6. Branch Information
+
+Return
+
+```json
+branch: {
+    name,
+    address,
+    city,
+    phone,
+    email
+}
+```
+
+Instead of
+
+```
+branchId
+```
+
+---
+
+# 7. Services
+
+Instead of
+
+```
+serviceId
+```
+
+Return
+
+```json
+service: {
+    name: "Business Card Printing",
+    category: "Marketing Materials"
+}
+```
+
+---
+
+# 8. Categories
+
+Instead of IDs
+
+Return
+
+```json
+category: {
+    name: "Large Format Printing"
+}
+```
+
+---
+
+# 9. Quotation
+
+Instead of
+
+```
+quotationId
+```
+
+Return
+
+```json
+quotation: {
+    quotationNumber: "QT-2026-00018",
+    amount: 450,
+    currency: "GHS",
+    status: "Approved"
+}
+```
+
+---
+
+# 10. Payment
+
+Instead of
+
+```
+paymentId
+```
+
+Return
+
+```json
+payment: {
+    amount: 450,
+    currency: "GHS",
+    method: "Mobile Money",
+    provider: "MTN MoMo",
+    status: "Paid"
+}
+```
+
+---
+
+# 11. Assigned Staff
+
+Instead of
+
+```
+assignedTo
+```
+
+Return
+
+```json
+assignedStaff: {
+    name: "Bernard Baah",
+    role: "Branch Manager"
+}
+```
+
+---
+
+# 12. Order Timeline
+
+Create a structured timeline.
+
+Instead of
+
+```json
+history: [...]
+```
+
+Return
+
+```json
+timeline: [
+    {
+        title: "Order Submitted",
+        description: "Customer submitted the order.",
+        time: "18 Jul 2026 • 10:30 AM"
+    },
+    {
+        title: "Quotation Sent",
+        description: "Quotation has been sent to the customer.",
+        time: "18 Jul 2026 • 11:12 AM"
+    }
+]
+```
+
+---
+
+# 13. Order Summary
+
+Every order should include
+
+```json
+summary: {
+    totalItems: 5,
+    totalQuantity: 320,
+    estimatedCompletion: "22 Jul 2026",
+    paymentStatus: "Paid",
+    deliveryMethod: "Pickup"
+}
+```
+
+---
+
+# 14. Populate Relationships
+
+Review every Order endpoint and ensure relationships are populated.
+
+Examples include
+
+* customer
+* branch
+* service
+* category
+* quotation
+* payment
+* assigned staff
+
+Avoid N+1 query issues by using efficient population, joins, or aggregation where appropriate.
+
+---
+
+# 15. Remove Backend-Only Fields
+
+Do not expose
+
+* __v
+* password
+* refreshToken
+* deletedAt
+* internalNotes
+* audit metadata
+* internal database IDs unless explicitly required
+
+---
+
+# 16. Standardize API Responses
+
+Order responses should be clean and consistent.
+
+Example
+
+```json
+{
+    "orderNumber": "PD-2026-00124",
+
+    "customer": {
+        "fullName": "Kwame Mensah",
+        "phone": "+233..."
+    },
+
+    "branch": {
+        "name": "Print Hub East Legon"
+    },
+
+    "service": {
+        "name": "Banner Printing"
+    },
+
+    "status": {
+        "code": "PRINTING",
+        "label": "In Production",
+        "color": "info"
+    },
+
+    "payment": {
+        "status": "Paid",
+        "amount": 350,
+        "currency": "GHS"
+    },
+
+    "createdAtFormatted": "18 Jul 2026",
+
+    "summary": {
+        "totalItems": 3,
+        "estimatedCompletion": "22 Jul 2026"
+    }
+}
+```
+
+---
+
+# 17. Apply Everywhere
+
+Search the backend for every endpoint related to:
+
+* Order list
+* Order details
+* Customer orders
+* Branch orders
+* Admin orders
+* Dashboard statistics
+* Recent orders
+* Search endpoints
+* Export endpoints
+
+Ensure they all return consistent, human-readable data.
+
+---
+
+# Deliverables
+
+1. Refactor all order-related serializers, DTOs, transformers, aggregation pipelines, and controllers to return human-readable responses.
+2. Populate related entities instead of exposing raw IDs.
+3. Standardize response formats across all order endpoints.
+4. Preserve internal IDs only where required for backend logic, never as the primary display value.
+5. Ensure the frontend can render order tables and detail pages without additional lookup requests.
+6. Maintain backward compatibility where practical by introducing formatted fields rather than breaking existing API contracts, unless a breaking change is explicitly justified and documented.
+7. Produce a summary listing every modified endpoint, every response field improved, and any recommended follow-up refactors.

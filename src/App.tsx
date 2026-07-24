@@ -12,6 +12,7 @@ import { Clerks } from "./pages/Clerks";
 import { Clients } from "./pages/Clients";
 import { Support } from "./pages/Support";
 import { Orders } from "./pages/Orders";
+import { OrderDetail } from "./pages/OrderDetail";
 import { QuotationQueue } from "./pages/QuotationQueue";
 import { Services } from "./pages/Services";
 import { Billing } from "./pages/Billing";
@@ -40,6 +41,7 @@ const protectedRoutes = [
   { path: "/clerks", element: <Clerks /> },
   { path: "/clients", element: <Clients /> },
   { path: "/orders", element: <Orders /> },
+  { path: "/orders/:id", element: <OrderDetail /> },
   { path: "/quotations", element: <QuotationQueue /> },
   { path: "/services", element: <Services /> },
   { path: "/billing", element: <Billing /> },

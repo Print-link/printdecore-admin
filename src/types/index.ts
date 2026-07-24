@@ -198,6 +198,8 @@ export interface Order {
   comment?: string;
   /** Ops-only production partner assignment — never shown to the customer. */
   assignedVendorId?: string;
+  /** Ops-only — resolved display name for assignedVendorId. */
+  assignedVendorName?: string;
   /** Ops-only internal note — never shown to the customer. */
   internalNotes?: string;
   items?: OrderItem[];
