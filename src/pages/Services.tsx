@@ -83,6 +83,11 @@ function CategoriesTab() {
     onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['categories'] }); toast.success('Category deleted'); },
     onError: (e: any) => toast.error(e.response?.data?.message || 'Failed to delete category'),
   });
+  const setPopularMutation = useMutation({
+    mutationFn: ({ id, isPopular }: { id: string; isPopular: boolean }) => categoryService.setPopular(id, isPopular),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['categories'] }),
+    onError: (e: any) => toast.error(e.response?.data?.message || 'Failed to update category'),
+  });
 
   const openCreate = () => { setEditing(null); setModalOpen(true); };
   const openEdit = (c: ServiceCategory) => { setEditing(c); setModalOpen(true); };
@@ -118,6 +123,10 @@ function CategoriesTab() {
               title={c.name}
               subtitle={c.description || '-'}
               trailing={
+                <>
+                <div onClick={(e) => e.stopPropagation()} title="Popular (shown on the mobile Home screen)">
+                  <Switch checked={!!c.isPopular} onChange={() => setPopularMutation.mutate({ id: c.id, isPopular: !c.isPopular })} />
+                </div>
                 <div className="relative" onClick={(e) => e.stopPropagation()}>
                   <button
                     onClick={() => setOpenMenuId(openMenuId === c.id ? null : c.id)}
@@ -139,6 +148,7 @@ function CategoriesTab() {
                     </div>
                   )}
                 </div>
+                </>
               }
             />
           ))}
@@ -203,6 +213,11 @@ function SubCategoriesTab() {
     onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['sub-categories'] }); toast.success('Sub-category deleted'); },
     onError: (e: any) => toast.error(e.response?.data?.message || 'Failed to delete sub-category'),
   });
+  const setPopularMutation = useMutation({
+    mutationFn: ({ id, isPopular }: { id: string; isPopular: boolean }) => subCategoryService.setPopular(id, isPopular),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['sub-categories'] }),
+    onError: (e: any) => toast.error(e.response?.data?.message || 'Failed to update sub-category'),
+  });
 
   const openCreate = () => { setEditing(null); setModalOpen(true); };
   const openEdit = (s: ServiceSubCategory) => { setEditing(s); setModalOpen(true); };
@@ -241,6 +256,9 @@ function SubCategoriesTab() {
               trailing={
                 <>
                   <Badge variant="neutral">{s.pricingType.replace(/_/g, ' ')}</Badge>
+                  <div onClick={(e) => e.stopPropagation()} title="Popular (shown on the mobile Home screen)">
+                    <Switch checked={!!s.isPopular} onChange={() => setPopularMutation.mutate({ id: s.id, isPopular: !s.isPopular })} />
+                  </div>
                   <div className="relative" onClick={(e) => e.stopPropagation()}>
                     <button
                       onClick={() => setOpenMenuId(openMenuId === s.id ? null : s.id)}

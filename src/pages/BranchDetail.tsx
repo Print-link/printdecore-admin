@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import toast from 'react-hot-toast';
-import { ArrowLeft, Building2, Mail, Phone, MapPin, Layers, MoreVertical, Link2, Search, ChevronRight } from 'lucide-react';
+import { ArrowLeft, Building2, Mail, Phone, MapPin, Layers, MoreVertical, Link2, Search, ChevronRight, Star, Crown, Percent, Clock } from 'lucide-react';
 import {
   branchService,
   agentServiceService,
@@ -20,7 +20,16 @@ import { Badge } from '../components/ui/Badge';
 import { Button } from '../components/ui/Button';
 import { Switch } from '../components/ui/Switch';
 import { FormField, iosInputCls } from '../components/ui/FormField';
+import { getStoreOpenStatus, orderedDays, currentDayKey, formatHourRange, WEEKDAY_LABELS } from '../utils/storeHours';
 import type { AgentService, ServiceCategory } from '../types';
+
+const TIER_LABEL: Record<string, string> = {
+  '2x': '🔥 2x Performer',
+  '3x': '🔥 3x Performer',
+  '4x': '🔥 4x Performer',
+  '5x': '🔥 5x Performer',
+  diamond: '💎 Diamond Partner',
+};
 
 export const BranchDetail = () => {
   const { id } = useParams<{ id: string }>();
@@ -45,30 +54,100 @@ export const BranchDetail = () => {
           <p className="text-sm text-ios-gray">Branch not found.</p>
         ) : (
           <>
-            <div className="flex items-center gap-3 mb-4">
-              {branch.coverImage ? (
-                <img src={branch.coverImage} alt="" className="w-12 h-12 rounded-2xl object-cover" />
-              ) : (
-                <div className="w-12 h-12 rounded-2xl bg-brand/15 flex items-center justify-center">
-                  <Building2 className="w-6 h-6 text-brand-hover" />
+            {/* Storefront hero */}
+            <div className="relative rounded-ios overflow-hidden shadow-ios mb-4">
+              <div className="h-40 sm:h-52 relative">
+                {branch.coverImage ? (
+                  <img src={branch.coverImage} alt="" className="w-full h-full object-cover" />
+                ) : (
+                  <div className="w-full h-full bg-linear-to-br from-brand/50 via-brand/20 to-ios-gray6 flex items-center justify-center">
+                    <Building2 className="w-14 h-14 text-brand-hover/60" />
+                  </div>
+                )}
+                <div className="absolute inset-0 bg-linear-to-t from-black/85 via-black/25 to-black/0" />
+              </div>
+
+              <div className="absolute top-3 right-3">
+                <span className={`inline-flex px-2.5 py-0.5 text-xs font-semibold rounded-full backdrop-blur bg-white/90 ${branch.status === 'active' || !branch.status ? 'text-ios-green' : 'text-ios-secondary-label'}`}>
+                  {branch.status || 'Active'}
+                </span>
+              </div>
+
+              <div className="absolute inset-x-0 bottom-0 p-4 sm:p-5">
+                <div className="flex flex-wrap items-center gap-1.5 mb-1.5">
+                  {branch.isMainBranch && (
+                    <span className="inline-flex items-center gap-1 bg-brand text-ios-label text-[11px] font-semibold px-2 py-0.5 rounded-full">
+                      <Crown className="w-3 h-3" /> Flagship Store
+                    </span>
+                  )}
+                  {branch.performanceTier && TIER_LABEL[branch.performanceTier] && (
+                    <span className="inline-flex items-center gap-1 bg-white/90 text-ios-label text-[11px] font-semibold px-2 py-0.5 rounded-full">
+                      {TIER_LABEL[branch.performanceTier]}
+                    </span>
+                  )}
+                  {(() => {
+                    const open = getStoreOpenStatus(branch.operatingHours);
+                    if (open.isOpen === null) return null;
+                    return (
+                      <span className={`inline-flex items-center gap-1 text-[11px] font-medium px-2 py-0.5 rounded-full ${open.isOpen ? 'bg-ios-green text-white' : 'bg-black/40 text-white'}`}>
+                        <span className={`w-1.5 h-1.5 rounded-full ${open.isOpen ? 'bg-white animate-pulse' : 'bg-white/60'}`} />
+                        {open.label}
+                      </span>
+                    );
+                  })()}
                 </div>
-              )}
-              <div>
-                <div className="flex items-center gap-2">
-                  <h1 className="text-xl font-bold text-ios-label tracking-tight">{branch.name}</h1>
-                  <Badge variant={branch.status === 'active' || !branch.status ? 'success' : 'neutral'}>
-                    {branch.status || 'Active'}
-                  </Badge>
+                <h1 className="text-xl sm:text-2xl font-bold text-white tracking-tight drop-shadow">{branch.name}</h1>
+                <div className="flex flex-wrap items-center gap-x-3 gap-y-1 mt-1 text-white/90 text-xs">
+                  <span className="flex items-center gap-0.5">
+                    {[1, 2, 3, 4, 5].map((i) => (
+                      <Star key={i} className="w-3.5 h-3.5" fill={i <= Math.round(branch.averageRating) ? 'currentColor' : 'none'} />
+                    ))}
+                    <span className="ml-1">
+                      {branch.averageRating ? branch.averageRating.toFixed(1) : 'No ratings yet'}
+                      {branch.totalRatings ? ` (${branch.totalRatings})` : ''}
+                    </span>
+                  </span>
+                  <span>{branch.totalServicesCount ?? 0} services</span>
                 </div>
-                <p className="text-xs text-ios-secondary-label mt-0.5">{branch.totalServicesCount ?? 0} configured services</p>
               </div>
             </div>
 
-            <ListGroup title="Branch Info">
+            {branch.activeDiscount && (
+              <div className="flex items-center gap-2 bg-linear-to-r from-brand/20 to-brand/5 border border-brand/30 rounded-ios px-4 py-2.5 mb-4">
+                <Percent className="w-4 h-4 text-brand-hover shrink-0" />
+                <p className="text-sm text-ios-label">
+                  <span className="font-semibold">{branch.activeDiscount.name}</span> — code{' '}
+                  <span className="font-mono font-semibold">{branch.activeDiscount.code}</span> (
+                  {branch.activeDiscount.discountType === 'percentage'
+                    ? `${branch.activeDiscount.discountValue}% off`
+                    : `${branch.activeDiscount.currency} ${branch.activeDiscount.discountValue} off`}
+                  )
+                </p>
+              </div>
+            )}
+
+            <ListGroup title="Store Info">
               <ListRow leading={<Mail className="w-5 h-5 text-brand-hover" />} title="Email" trailing={<span className="text-sm text-ios-secondary-label">{branch.email || '-'}</span>} />
               <ListRow leading={<Phone className="w-5 h-5 text-brand-hover" />} title="Phone" trailing={<span className="text-sm text-ios-secondary-label">{branch.phoneNumber || '-'}</span>} />
               <ListRow leading={<MapPin className="w-5 h-5 text-brand-hover" />} title="Address" trailing={<span className="text-sm text-ios-secondary-label text-right max-w-[60%]">{branch.address || branch.location?.address || '-'}</span>} />
             </ListGroup>
+
+            {branch.operatingHours && Object.keys(branch.operatingHours).length > 0 && (
+              <ListGroup title="Opening Hours">
+                {orderedDays().map((day) => {
+                  const hours = branch.operatingHours![day];
+                  const isToday = day === currentDayKey();
+                  return (
+                    <ListRow
+                      key={day}
+                      leading={<Clock className={`w-5 h-5 ${isToday ? 'text-brand-hover' : 'text-ios-gray3'}`} />}
+                      title={<span className={isToday ? 'font-semibold text-ios-label' : ''}>{WEEKDAY_LABELS[day]}{isToday ? ' · Today' : ''}</span>}
+                      trailing={<span className="text-sm text-ios-secondary-label">{hours ? formatHourRange(hours) : 'Closed'}</span>}
+                    />
+                  );
+                })}
+              </ListGroup>
+            )}
 
             <BranchServices branchId={branchId} />
           </>
@@ -105,6 +184,11 @@ function BranchServices({ branchId }: { branchId: string }) {
     mutationFn: ({ id, isActive }: { id: string; isActive: boolean }) => agentServiceService.update(id, { isActive }),
     onSuccess: invalidateServices,
     onError: (e: any) => toast.error(e.response?.data?.message || 'Failed to update service'),
+  });
+  const setPrimaryMutation = useMutation({
+    mutationFn: (id: string) => agentServiceService.setPrimary(id),
+    onSuccess: () => { invalidateServices(); toast.success('Set as primary — this is what customers near this branch see on Home'); },
+    onError: (e: any) => toast.error(e.response?.data?.message || 'Failed to set primary service'),
   });
   const deleteMutation = useMutation({
     mutationFn: (id: string) => agentServiceService.delete(id),
@@ -182,6 +266,14 @@ function BranchServices({ branchId }: { branchId: string }) {
               <div onClick={(e) => e.stopPropagation()} className="shrink-0">
                 <Switch checked={s.isActive} onChange={() => toggleActiveMutation.mutate({ id: s.id, isActive: !s.isActive })} />
               </div>
+              <button
+                onClick={(e) => { e.stopPropagation(); if (!s.isPrimary) setPrimaryMutation.mutate(s.id); }}
+                className={`p-1.5 rounded-full shrink-0 ${s.isPrimary ? 'text-ios-orange' : 'text-ios-gray hover:bg-ios-gray6'}`}
+                title={s.isPrimary ? 'Primary service for this branch' : 'Set as primary (shown on the mobile Home screen)'}
+                type="button"
+              >
+                <Star className="w-4 h-4" fill={s.isPrimary ? 'currentColor' : 'none'} />
+              </button>
               <div className="relative shrink-0" onClick={(e) => e.stopPropagation()}>
                 <button
                   onClick={() => setOpenMenuId(openMenuId === s.id ? null : s.id)}

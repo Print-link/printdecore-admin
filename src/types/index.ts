@@ -99,6 +99,7 @@ export interface Branch {
     address: string;
   };
   status?: string;
+  operatingHours?: Record<string, { open: string; close: string }>;
   createdAt?: string;
   updatedAt?: string;
   payStackSubAccountId?: string;
@@ -214,6 +215,7 @@ export interface ServiceCategory {
   description?: string;
   imageUrl?: string;
   branchId?: string;
+  isPopular?: boolean;
   createdAt?: string;
   updatedAt?: string;
 }
@@ -228,6 +230,7 @@ export interface ServiceSubCategory {
   imageUrl?: string;
   pricingType: PricingType;
   branchId?: string;
+  isPopular?: boolean;
   createdAt?: string;
   updatedAt?: string;
 }
@@ -306,6 +309,7 @@ export interface AgentService {
   constant?: number;
   colorPriceModifier?: number;
   isActive: boolean;
+  isPrimary?: boolean;
   supportsPrintCut: boolean;
   supportsColor: boolean;
   supportsFrontBack: boolean;
@@ -345,9 +349,26 @@ export interface BranchDetailResponse {
   averageRating: number;
   totalRatings: number;
   status?: string;
-  activeDiscount?: unknown;
-  performanceTier?: unknown;
+  isMainBranch?: boolean;
+  activeDiscount?: {
+    code: string;
+    name: string;
+    discountType: 'percentage' | 'fixed';
+    discountValue: number;
+    currency: string;
+  };
+  /** Marketplace visibility tier: 'standard' | '2x' | '3x' | '4x' | '5x' | 'diamond' */
+  performanceTier?: string;
   clerks?: unknown[];
+}
+
+export interface OrderItemFile {
+  url: string;
+  publicId: string;
+  name: string;
+  size?: number;
+  format?: string;
+  [key: string]: unknown;
 }
 
 export interface OrderItem {
@@ -357,7 +378,11 @@ export interface OrderItem {
   quantity: number;
   unitPrice: number;
   totalPrice: number;
-  specifications?: Record<string, unknown>;
+  width?: number;
+  height?: number;
+  measurementUnit?: string;
+  configSummary?: string[];
+  files?: OrderItemFile[];
   createdAt: string;
 }
 

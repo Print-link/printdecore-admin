@@ -10,6 +10,7 @@ import { ListGroup, ListRow } from '../components/ui/ListGroup';
 import { Badge } from '../components/ui/Badge';
 import { Button } from '../components/ui/Button';
 import { FormField, iosInputCls } from '../components/ui/FormField';
+import { OrderItemsTable } from '../components/order/OrderItemsTable';
 import type { Order } from '../types';
 
 type BadgeVariant = 'success' | 'neutral' | 'warning' | 'danger';
@@ -163,6 +164,15 @@ export const QuotationQueue = () => {
                   <p className="text-xs text-ios-gray">
                     Use this if the original vendor isn't available and a different one confirmed instead.
                   </p>
+                </div>
+              )}
+
+              {order?.items && order.items.length > 0 && (
+                <div>
+                  <p className="text-xs font-medium text-ios-secondary-label mb-1">
+                    Items {order.items.length > 1 ? `(${order.items.length})` : ''}
+                  </p>
+                  <OrderItemsTable items={order.items} />
                 </div>
               )}
 

@@ -9,6 +9,7 @@ import { Layout } from '../components/Layout';
 import { Badge } from '../components/ui/Badge';
 import { Button } from '../components/ui/Button';
 import { FormField, iosInputCls } from '../components/ui/FormField';
+import { OrderItemsTable } from '../components/order/OrderItemsTable';
 import { formatDateTime } from '../utils/date';
 import type { OrderStatus } from '../types';
 
@@ -191,28 +192,7 @@ export const OrderDetail = () => {
             {order.items && order.items.length > 0 && (
               <div>
                 <p className="text-xs font-medium text-ios-secondary-label mb-2">Items</p>
-                <div className="bg-white border border-ios-gray5 rounded-ios overflow-hidden">
-                  <table className="w-full text-sm">
-                    <thead className="bg-ios-gray6">
-                      <tr>
-                        <th className="text-left px-3 py-2 text-xs font-medium text-ios-secondary-label">Service</th>
-                        <th className="text-right px-3 py-2 text-xs font-medium text-ios-secondary-label">Qty</th>
-                        <th className="text-right px-3 py-2 text-xs font-medium text-ios-secondary-label">Unit Price</th>
-                        <th className="text-right px-3 py-2 text-xs font-medium text-ios-secondary-label">Total</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-ios-gray5">
-                      {order.items.map((item) => (
-                        <tr key={item.id}>
-                          <td className="px-3 py-2 text-ios-label">{item.serviceName}</td>
-                          <td className="px-3 py-2 text-right text-ios-label">{item.quantity}</td>
-                          <td className="px-3 py-2 text-right text-ios-label">{item.unitPrice?.toFixed(2)}</td>
-                          <td className="px-3 py-2 text-right font-medium text-ios-label">{item.totalPrice?.toFixed(2)}</td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
+                <OrderItemsTable items={order.items} />
               </div>
             )}
           </div>

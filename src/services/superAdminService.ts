@@ -519,6 +519,10 @@ export const categoryService = {
     const response = await api.delete<{ success: boolean }>(`/categories/${id}`);
     return response.data;
   },
+  setPopular: async (id: string, isPopular: boolean) => {
+    const response = await api.patch<{ success: boolean; data: ServiceCategory }>(`/categories/${id}/popular`, { isPopular });
+    return response.data.data;
+  },
 };
 
 export const subCategoryService = {
@@ -543,6 +547,10 @@ export const subCategoryService = {
   delete: async (id: string) => {
     const response = await api.delete<{ success: boolean }>(`/sub-categories/${id}`);
     return response.data;
+  },
+  setPopular: async (id: string, isPopular: boolean) => {
+    const response = await api.patch<{ success: boolean; data: ServiceSubCategory }>(`/sub-categories/${id}/popular`, { isPopular });
+    return response.data.data;
   },
 };
 
@@ -606,5 +614,9 @@ export const agentServiceService = {
   delete: async (id: string) => {
     const response = await api.delete<{ success: boolean }>(`/agent-services/${id}`);
     return response.data;
+  },
+  setPrimary: async (id: string) => {
+    const response = await api.patch<{ success: boolean; data: AgentService }>(`/agent-services/${id}/set-primary`, {});
+    return response.data.data;
   },
 };
