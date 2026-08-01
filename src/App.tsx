@@ -7,6 +7,7 @@ import { Login } from "./pages/Login";
 import { Dashboard } from "./pages/Dashboard";
 import { Managers } from "./pages/Managers";
 import { Branches } from "./pages/Branches";
+import { BranchCreate } from "./pages/BranchCreate";
 import { BranchDetail } from "./pages/BranchDetail";
 import { Clerks } from "./pages/Clerks";
 import { Clients } from "./pages/Clients";
@@ -36,6 +37,7 @@ const queryClient = new QueryClient({
 const protectedRoutes = [
   { path: "/dashboard", element: <Dashboard /> },
   { path: "/branches", element: <Branches /> },
+  { path: "/branches/new", element: <BranchCreate /> },
   { path: "/branches/:id", element: <BranchDetail /> },
   { path: "/managers", element: <Managers /> },
   { path: "/clerks", element: <Clerks /> },

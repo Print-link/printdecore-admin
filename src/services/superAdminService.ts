@@ -201,6 +201,23 @@ export const branchService = {
   }
 };
 
+// Locations — created separately from a branch, then linked back via branch_id
+export const locationService = {
+  create: async (data: {
+    branch_id: string;
+    address: string;
+    latitude: number;
+    longitude: number;
+    city?: string;
+    state?: string;
+    country?: string;
+    postalCode?: string;
+  }) => {
+    const response = await api.post<{ success: boolean; data: { id: string } }>('/locations', data);
+    return response.data.data;
+  },
+};
+
 // Managers
 export const managerService = {
   getAll: async (params?: { page?: number; limit?: number; search?: string }) => {

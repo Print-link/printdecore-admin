@@ -21,7 +21,6 @@ export const Branches = () => {
   const [search, setSearch] = useState('');
   const [editingBranch, setEditingBranch] = useState<Branch | null>(null);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
-  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [openDropdownId, setOpenDropdownId] = useState<string | null>(null);
   const dropdownRefs = useRef<{ [key: string]: HTMLDivElement | null }>({});
   const queryClient = useQueryClient();
@@ -49,12 +48,6 @@ export const Branches = () => {
     queryFn: () => userService.getAll({ limit: 100 }),
   });
 
-  const createMutation = useMutation({
-    mutationFn: (data: FormData) => branchService.create(data),
-    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['branches'] }); toast.success('Branch created'); setIsCreateModalOpen(false); },
-    onError: (error: any) => { toast.error(error.response?.data?.message || 'Failed to create branch'); },
-  });
-
   const updateMutation = useMutation({
     mutationFn: ({ id, data }: { id: string; data: FormData }) => branchService.update(id, data),
     onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['branches'] }); toast.success('Branch updated'); setIsEditModalOpen(false); setEditingBranch(null); },
@@ -66,20 +59,6 @@ export const Branches = () => {
     onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['branches'] }); toast.success('Branch deleted'); },
     onError: (error: any) => { toast.error(error.response?.data?.message || 'Failed to delete branch'); },
   });
-
-  const handleSubmitCreate = (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
-    const formData = new FormData(e.currentTarget);
-    if (!formData.get('operatingHours')) {
-      formData.append('operatingHours', JSON.stringify({
-        monday: { open: "09:00", close: "17:00" }, tuesday: { open: "09:00", close: "17:00" },
-        wednesday: { open: "09:00", close: "17:00" }, thursday: { open: "09:00", close: "17:00" },
-        friday: { open: "09:00", close: "17:00" }, saturday: { open: "10:00", close: "14:00" },
-        sunday: { open: "10:00", close: "14:00" }
-      }));
-    }
-    createMutation.mutate(formData);
-  };
 
   const handleSubmitEdit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -93,7 +72,7 @@ export const Branches = () => {
       <div>
         <PageHeader
           title="Branches"
-          actions={<Button size="sm" onClick={() => setIsCreateModalOpen(true)}>Create Branch</Button>}
+          actions={<Button size="sm" onClick={() => navigate('/branches/new')}>Create Branch</Button>}
         />
 
         <div className="mb-3">
@@ -195,41 +174,6 @@ export const Branches = () => {
             {data?.pagination && <Pagination {...data.pagination} onPageChange={setPage} />}
           </>
         )}
-
-        {/* Create Modal */}
-        <Modal isOpen={isCreateModalOpen} onClose={() => setIsCreateModalOpen(false)} title="Create New Branch">
-          <form onSubmit={handleSubmitCreate} className="space-y-4">
-            <FormField label="Branch Name">
-              <input type="text" name="name" required className={iosInputCls} placeholder="e.g. Main Street Branch" />
-            </FormField>
-            <FormField label="Manager">
-              <select name="manager_id" required className={iosInputCls}>
-                <option value="">Select Manager</option>
-                {(managersData?.users as any)?.map((u: User) => (
-                  <option key={u._id} value={u._id}>{u.name} ({u.email})</option>
-                ))}
-              </select>
-            </FormField>
-            <FormField label="Email">
-              <input type="email" name="branchEmailAddress" required className={iosInputCls} />
-            </FormField>
-            <FormField label="Phone">
-              <input type="text" name="phoneNumber" required className={iosInputCls} />
-            </FormField>
-            <FormField label="Cover Image">
-              <input type="file" name="branchCoverImage" accept="image/*" className={iosInputCls} />
-            </FormField>
-            <FormField label="Paystack Subaccount ID (Optional)">
-              <input type="text" name="payStackSubAccountId" className={iosInputCls} />
-            </FormField>
-            <div className="flex justify-end gap-3 pt-2">
-              <Button type="button" variant="secondary" onClick={() => setIsCreateModalOpen(false)}>Cancel</Button>
-              <Button type="submit" disabled={createMutation.isPending}>
-                {createMutation.isPending ? 'Creating...' : 'Create Branch'}
-              </Button>
-            </div>
-          </form>
-        </Modal>
 
         {/* Edit Modal */}
         <Modal isOpen={isEditModalOpen} onClose={() => { setIsEditModalOpen(false); setEditingBranch(null); }} title="Edit Branch">
