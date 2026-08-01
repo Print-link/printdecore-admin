@@ -1,8 +1,8 @@
 import { useState } from 'react';
 import toast from 'react-hot-toast';
 
-export function useBranchImage() {
-  const [imagePreview, setImagePreview] = useState<string | null>(null);
+export function useBranchImage(initialPreview: string | null = null) {
+  const [imagePreview, setImagePreview] = useState<string | null>(initialPreview);
 
   const handleImageSelect = (file: File, onSelect: (file: File) => void) => {
     if (!file.type.startsWith('image/')) {

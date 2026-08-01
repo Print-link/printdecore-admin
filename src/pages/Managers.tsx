@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { MoreVertical, UserRound } from 'lucide-react';
-import { managerService } from '../services/superAdminService';
+import { MoreVertical, UserRound, Mail, ShieldCheck, ArrowLeft } from 'lucide-react';
+import { managerService, otpService } from '../services/superAdminService';
 import { LoadingSpinner } from '../components/LoadingSpinner';
 import { Layout } from '../components/Layout';
 import { Modal } from '../components/Modal';
@@ -24,6 +24,26 @@ export const Managers = () => {
   const dropdownRefs = useRef<{ [key: string]: HTMLDivElement | null }>({});
   const queryClient = useQueryClient();
 
+  // Registering a manager is a 3-step flow: verify the email owns an inbox via OTP
+  // before ever collecting a password — POST /auth/register 403s without it.
+  const [createStep, setCreateStep] = useState<'email' | 'otp' | 'details'>('email');
+  const [regEmail, setRegEmail] = useState('');
+  const [otpCode, setOtpCode] = useState('');
+  const [resendCooldown, setResendCooldown] = useState(0);
+
+  useEffect(() => {
+    if (resendCooldown <= 0) return;
+    const timer = setInterval(() => setResendCooldown((s) => Math.max(0, s - 1)), 1000);
+    return () => clearInterval(timer);
+  }, [resendCooldown]);
+
+  const resetCreateFlow = () => {
+    setCreateStep('email');
+    setRegEmail('');
+    setOtpCode('');
+    setResendCooldown(0);
+  };
+
   useEffect(() => {
     if (!openDropdownId) return;
     const handleClickOutside = (event: MouseEvent) => {
@@ -42,9 +62,37 @@ export const Managers = () => {
     queryFn: () => managerService.getAll({ page, limit: 10, search: search || undefined }),
   });
 
+  const sendOtpMutation = useMutation({
+    mutationFn: (email: string) => otpService.sendManagerOTP(email),
+    onSuccess: (_res, email) => {
+      setRegEmail(email);
+      setCreateStep('otp');
+      setResendCooldown(60);
+      toast.success(`Verification code sent to ${email}`);
+    },
+    onError: (error: any) => { toast.error(error.response?.data?.message || 'Failed to send verification code'); },
+  });
+
+  const verifyOtpMutation = useMutation({
+    mutationFn: () => otpService.verify(regEmail, otpCode),
+    onSuccess: () => { setCreateStep('details'); toast.success('Email verified'); },
+    onError: (error: any) => { toast.error(error.response?.data?.message || 'Invalid verification code'); },
+  });
+
+  const resendOtpMutation = useMutation({
+    mutationFn: () => otpService.resend(regEmail),
+    onSuccess: () => { setOtpCode(''); setResendCooldown(60); toast.success('Verification code resent'); },
+    onError: (error: any) => { toast.error(error.response?.data?.message || 'Failed to resend code'); },
+  });
+
   const createMutation = useMutation({
     mutationFn: (data: any) => managerService.create(data),
-    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['managers'] }); toast.success('Manager created'); setIsCreateModalOpen(false); },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['managers'] });
+      toast.success('Manager created');
+      setIsCreateModalOpen(false);
+      resetCreateFlow();
+    },
     onError: (error: any) => { toast.error(error.response?.data?.message || 'Failed to create manager'); },
   });
 
@@ -60,12 +108,23 @@ export const Managers = () => {
     onError: (error: any) => { toast.error(error.response?.data?.message || 'Failed to remove manager'); },
   });
 
-  const handleSubmitCreate = (e: React.FormEvent<HTMLFormElement>) => {
+  const handleSendOtp = (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    const fd = new FormData(e.currentTarget);
+    sendOtpMutation.mutate(String(fd.get('email')).trim());
+  };
+
+  const handleVerifyOtp = (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    verifyOtpMutation.mutate();
+  };
+
+  const handleSubmitDetails = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     const fd = new FormData(e.currentTarget);
     createMutation.mutate({
       firstName: fd.get('firstName'), lastName: fd.get('lastName'),
-      email: fd.get('email'), phoneNumber: fd.get('phoneNumber'),
+      email: regEmail, phoneNumber: fd.get('phoneNumber'),
       password: fd.get('password'), role: 'manager',
     });
   };
@@ -146,33 +205,110 @@ export const Managers = () => {
           </>
         )}
 
-        {/* Create Modal */}
-        <Modal isOpen={isCreateModalOpen} onClose={() => setIsCreateModalOpen(false)} title="Register New Manager">
-          <form onSubmit={handleSubmitCreate} className="space-y-4">
-            <div className="grid grid-cols-2 gap-4">
-              <FormField label="First Name">
-                <input type="text" name="firstName" required className={iosInputCls} placeholder="First Name" />
+        {/* Create Modal — 3 steps: verify email owns an inbox before ever collecting a password */}
+        <Modal
+          isOpen={isCreateModalOpen}
+          onClose={() => { setIsCreateModalOpen(false); resetCreateFlow(); }}
+          title={
+            createStep === 'email' ? 'Register New Manager'
+              : createStep === 'otp' ? 'Verify Email'
+              : 'Manager Details'
+          }
+        >
+          {createStep === 'email' && (
+            <form onSubmit={handleSendOtp} className="space-y-4">
+              <div className="flex items-start gap-3 bg-ios-gray6 rounded-ios p-3.5">
+                <Mail className="w-5 h-5 text-brand-hover shrink-0 mt-0.5" />
+                <p className="text-sm text-ios-secondary-label">
+                  We'll email a 6-digit code to confirm this address before the manager account is created.
+                </p>
+              </div>
+              <FormField label="Email">
+                <input type="email" name="email" required className={iosInputCls} placeholder="manager@example.com" autoFocus />
               </FormField>
-              <FormField label="Last Name">
-                <input type="text" name="lastName" required className={iosInputCls} placeholder="Last Name" />
+              <div className="flex justify-end gap-3 pt-2">
+                <Button type="button" variant="secondary" onClick={() => { setIsCreateModalOpen(false); resetCreateFlow(); }}>Cancel</Button>
+                <Button type="submit" disabled={sendOtpMutation.isPending}>
+                  {sendOtpMutation.isPending ? 'Sending…' : 'Send Verification Code'}
+                </Button>
+              </div>
+            </form>
+          )}
+
+          {createStep === 'otp' && (
+            <form onSubmit={handleVerifyOtp} className="space-y-4">
+              <div className="flex items-start gap-3 bg-ios-gray6 rounded-ios p-3.5">
+                <ShieldCheck className="w-5 h-5 text-brand-hover shrink-0 mt-0.5" />
+                <p className="text-sm text-ios-secondary-label">
+                  Enter the 6-digit code sent to <span className="font-medium text-ios-label">{regEmail}</span>. It expires in 30 minutes.
+                </p>
+              </div>
+              <FormField label="Verification Code">
+                <input
+                  type="text"
+                  inputMode="numeric"
+                  maxLength={6}
+                  value={otpCode}
+                  onChange={(e) => setOtpCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
+                  required
+                  className={`${iosInputCls} text-center text-lg tracking-[0.5em] font-mono`}
+                  placeholder="------"
+                  autoFocus
+                />
               </FormField>
-            </div>
-            <FormField label="Email">
-              <input type="email" name="email" required className={iosInputCls} placeholder="manager@example.com" />
-            </FormField>
-            <FormField label="Phone Number">
-              <input type="text" name="phoneNumber" className={iosInputCls} placeholder="Optional" />
-            </FormField>
-            <FormField label="Password">
-              <input type="password" name="password" required minLength={6} className={iosInputCls} placeholder="••••••" />
-            </FormField>
-            <div className="flex justify-end gap-3 pt-2">
-              <Button type="button" variant="secondary" onClick={() => setIsCreateModalOpen(false)}>Cancel</Button>
-              <Button type="submit" disabled={createMutation.isPending}>
-                {createMutation.isPending ? 'Creating...' : 'Register Manager'}
-              </Button>
-            </div>
-          </form>
+              <div className="flex items-center justify-between text-xs">
+                <button
+                  type="button"
+                  onClick={() => setCreateStep('email')}
+                  className="flex items-center gap-1 text-ios-secondary-label hover:text-ios-label"
+                >
+                  <ArrowLeft className="w-3.5 h-3.5" /> Change email
+                </button>
+                <button
+                  type="button"
+                  onClick={() => resendOtpMutation.mutate()}
+                  disabled={resendCooldown > 0 || resendOtpMutation.isPending}
+                  className="text-brand-hover font-medium disabled:text-ios-gray disabled:cursor-not-allowed"
+                >
+                  {resendCooldown > 0 ? `Resend code in ${resendCooldown}s` : resendOtpMutation.isPending ? 'Resending…' : 'Resend code'}
+                </button>
+              </div>
+              <div className="flex justify-end gap-3 pt-2">
+                <Button type="button" variant="secondary" onClick={() => { setIsCreateModalOpen(false); resetCreateFlow(); }}>Cancel</Button>
+                <Button type="submit" disabled={otpCode.length !== 6 || verifyOtpMutation.isPending}>
+                  {verifyOtpMutation.isPending ? 'Verifying…' : 'Verify'}
+                </Button>
+              </div>
+            </form>
+          )}
+
+          {createStep === 'details' && (
+            <form onSubmit={handleSubmitDetails} className="space-y-4">
+              <FormField label="Email">
+                <input type="email" value={regEmail} disabled className={`${iosInputCls} opacity-60`} />
+              </FormField>
+              <div className="grid grid-cols-2 gap-4">
+                <FormField label="First Name">
+                  <input type="text" name="firstName" required className={iosInputCls} placeholder="First Name" autoFocus />
+                </FormField>
+                <FormField label="Last Name">
+                  <input type="text" name="lastName" required className={iosInputCls} placeholder="Last Name" />
+                </FormField>
+              </div>
+              <FormField label="Phone Number">
+                <input type="text" name="phoneNumber" className={iosInputCls} placeholder="Optional" />
+              </FormField>
+              <FormField label="Password">
+                <input type="password" name="password" required minLength={6} className={iosInputCls} placeholder="••••••" />
+              </FormField>
+              <div className="flex justify-end gap-3 pt-2">
+                <Button type="button" variant="secondary" onClick={() => { setIsCreateModalOpen(false); resetCreateFlow(); }}>Cancel</Button>
+                <Button type="submit" disabled={createMutation.isPending}>
+                  {createMutation.isPending ? 'Creating...' : 'Register Manager'}
+                </Button>
+              </div>
+            </form>
+          )}
         </Modal>
 
         {/* Edit Modal */}

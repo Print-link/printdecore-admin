@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import toast from 'react-hot-toast';
 import { Layout } from '../components/Layout';
-import { branchService, locationService, userService } from '../services/superAdminService';
+import { branchService, locationService, managerService } from '../services/superAdminService';
 import { useBranchForm } from '../hooks/useBranchForm';
 import { useBranchImage } from '../hooks/useBranchImage';
 import { BranchFormHeader } from '../components/branchForm/BranchFormHeader';
@@ -42,9 +42,9 @@ export const BranchCreate = () => {
 
   const { data: managersData } = useQuery({
     queryKey: ['managers'],
-    queryFn: () => userService.getAll({ limit: 100 }),
+    queryFn: () => managerService.getAll({ limit: 100 }),
   });
-  const managers = (managersData?.users as any) || [];
+  const managers = managersData?.managers || [];
 
   const handleImageSelect = (file: File) => {
     handleImageSelectBase(file, (selectedFile) => updateFormData({ branchCoverImage: selectedFile }));

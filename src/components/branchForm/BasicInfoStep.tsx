@@ -1,13 +1,15 @@
 import { FormField, iosInputCls } from '../ui/FormField';
 import { BranchImageUpload } from './BranchImageUpload';
 import type { BranchFormData } from '../../hooks/useBranchForm';
-import type { User } from '../../types';
+import type { Manager } from '../../types';
 
 interface BasicInfoStepProps {
   formData: BranchFormData;
   errors: Record<string, string>;
   imagePreview: string | null;
-  managers: User[];
+  managers: Manager[];
+  /** The backend doesn't support reassigning a branch's manager on update — show it read-only instead of a select. */
+  managerLocked?: boolean;
   onFormDataChange: (updates: Partial<BranchFormData>) => void;
   onImageSelect: (file: File) => void;
   onRemoveImage: () => void;
@@ -18,10 +20,12 @@ export function BasicInfoStep({
   errors,
   imagePreview,
   managers,
+  managerLocked,
   onFormDataChange,
   onImageSelect,
   onRemoveImage,
 }: BasicInfoStepProps) {
+  const assignedManager = managers.find((m) => m.id === formData.manager_id);
   return (
     <div className="space-y-4">
       <BranchImageUpload imagePreview={imagePreview} onImageSelect={onImageSelect} onRemoveImage={onRemoveImage} />
@@ -40,17 +44,26 @@ export function BasicInfoStep({
       </FormField>
 
       <FormField label="Manager *">
-        <select
-          value={formData.manager_id}
-          onChange={(e) => onFormDataChange({ manager_id: e.target.value })}
-          className={iosInputCls}
-          required
-        >
-          <option value="">Select manager</option>
-          {managers.map((m) => (
-            <option key={m._id} value={m._id}>{m.name} ({m.email})</option>
-          ))}
-        </select>
+        {managerLocked ? (
+          <div className={`${iosInputCls} bg-ios-gray5 text-ios-secondary-label cursor-not-allowed`}>
+            {assignedManager ? `${assignedManager.firstName} ${assignedManager.lastName} (${assignedManager.email})` : 'Unknown manager'}
+          </div>
+        ) : (
+          <select
+            value={formData.manager_id}
+            onChange={(e) => onFormDataChange({ manager_id: e.target.value })}
+            className={iosInputCls}
+            required
+          >
+            <option value="">Select manager</option>
+            {managers.map((m) => (
+              <option key={m.id} value={m.id}>{m.firstName} {m.lastName} ({m.email})</option>
+            ))}
+          </select>
+        )}
+        {managerLocked && (
+          <p className="text-xs text-ios-secondary-label mt-1">The assigned manager can't be changed from here.</p>
+        )}
         {errors.manager_id && <p className="text-ios-red text-sm mt-1">{errors.manager_id}</p>}
       </FormField>
 
@@ -101,6 +114,18 @@ export function BasicInfoStep({
           </FormField>
         </div>
       </div>
+
+      {managerLocked && (
+        <FormField label="Paystack Subaccount ID">
+          <input
+            type="text"
+            value={formData.payStackSubAccountId}
+            onChange={(e) => onFormDataChange({ payStackSubAccountId: e.target.value })}
+            className={iosInputCls}
+            placeholder="Set once payment setup is complete"
+          />
+        </FormField>
+      )}
     </div>
   );
 }

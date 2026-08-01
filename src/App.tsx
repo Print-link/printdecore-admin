@@ -8,6 +8,7 @@ import { Dashboard } from "./pages/Dashboard";
 import { Managers } from "./pages/Managers";
 import { Branches } from "./pages/Branches";
 import { BranchCreate } from "./pages/BranchCreate";
+import { BranchEdit } from "./pages/BranchEdit";
 import { BranchDetail } from "./pages/BranchDetail";
 import { Clerks } from "./pages/Clerks";
 import { Clients } from "./pages/Clients";
@@ -24,6 +25,7 @@ import { Roles } from "./pages/Roles";
 import BlogPosts from "./pages/BlogPosts";
 import { Waitlist } from "./pages/Waitlist";
 import { Discounts } from "./pages/Discounts";
+import { PrinterSales } from "./pages/PrinterSales";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -38,6 +40,7 @@ const protectedRoutes = [
   { path: "/dashboard", element: <Dashboard /> },
   { path: "/branches", element: <Branches /> },
   { path: "/branches/new", element: <BranchCreate /> },
+  { path: "/branches/:id/edit", element: <BranchEdit /> },
   { path: "/branches/:id", element: <BranchDetail /> },
   { path: "/managers", element: <Managers /> },
   { path: "/clerks", element: <Clerks /> },
@@ -55,6 +58,7 @@ const protectedRoutes = [
   { path: "/blog", element: <BlogPosts /> },
   { path: "/waitlist", element: <Waitlist /> },
   { path: "/discounts", element: <Discounts /> },
+  { path: "/printer-sales", element: <PrinterSales /> },
 ];
 
 function App() {

@@ -8,6 +8,8 @@ export interface BranchFormData {
   status: 'active' | 'inactive' | 'temporarily_closed';
   isMainBranch: boolean;
   branchCoverImage: File | null;
+  /** Ops-only, set once payment setup is done — not part of the create flow. */
+  payStackSubAccountId: string;
 }
 
 export interface LocationFormData {
@@ -40,7 +42,17 @@ const DEFAULT_OPERATING_HOURS: OperatingHours = {
   sunday: { open: '10:00', close: '14:00' },
 };
 
-export function useBranchForm() {
+export interface UseBranchFormOptions {
+  formData?: Partial<BranchFormData>;
+  locationData?: Partial<LocationFormData>;
+  operatingHours?: OperatingHours;
+  /** Editing an existing branch already has a cover image — don't force a re-upload. Defaults to true (create flow). */
+  requireCoverImage?: boolean;
+}
+
+export function useBranchForm(options?: UseBranchFormOptions) {
+  const requireCoverImage = options?.requireCoverImage ?? true;
+
   const [formData, setFormData] = useState<BranchFormData>({
     name: '',
     manager_id: '',
@@ -49,6 +61,8 @@ export function useBranchForm() {
     status: 'active',
     isMainBranch: false,
     branchCoverImage: null,
+    payStackSubAccountId: '',
+    ...options?.formData,
   });
 
   const [locationData, setLocationData] = useState<LocationFormData>({
@@ -59,9 +73,10 @@ export function useBranchForm() {
     state: '',
     country: '',
     postalCode: '',
+    ...options?.locationData,
   });
 
-  const [operatingHours, setOperatingHours] = useState<OperatingHours>(DEFAULT_OPERATING_HOURS);
+  const [operatingHours, setOperatingHours] = useState<OperatingHours>(options?.operatingHours || DEFAULT_OPERATING_HOURS);
   const [errors, setErrors] = useState<Record<string, string>>({});
 
   const updateFormData = (updates: Partial<BranchFormData>) => {
@@ -92,7 +107,7 @@ export function useBranchForm() {
     if (step === 1) {
       if (!formData.name.trim()) newErrors.name = 'Branch name is required';
       if (!formData.manager_id) newErrors.manager_id = 'A manager must be assigned to this branch';
-      if (!formData.branchCoverImage) newErrors.branchCoverImage = 'Branch cover image is required';
+      if (requireCoverImage && !formData.branchCoverImage) newErrors.branchCoverImage = 'Branch cover image is required';
     } else if (step === 2) {
       if (!locationData.address.trim()) newErrors.address = 'Address is required';
       if (!locationData.latitude || !locationData.longitude) {

@@ -333,7 +333,7 @@ export interface BranchDetailResponse {
   coverImage?: string;
   phoneNumber: string;
   email: string;
-  location?: { latitude: number; longitude: number; address: string };
+  location?: { id: string; latitude: number; longitude: number; address: string };
   agentServices: Array<{
     id: string;
     serviceTemplateId: string;
@@ -350,6 +350,7 @@ export interface BranchDetailResponse {
   totalRatings: number;
   status?: string;
   isMainBranch?: boolean;
+  manager_id?: string;
   activeDiscount?: {
     code: string;
     name: string;
@@ -489,4 +490,20 @@ export interface RevenueReport {
   dailyTrends: { date: string; revenue: number; orders: number }[];
   categoryPerformance: { category: string; revenue: number; orders: number; items: number }[];
   topServices: { name: string; revenue: number; orders: number }[];
+}
+
+// Printer sales catalogue — surfaced on the mobile app's "Print Sales" screen.
+export interface PrinterListing {
+  id: string;
+  name: string;
+  price: number;
+  description: string | null;
+  tags: string[];
+  specs: string[];
+  images: string[];
+  quantity: number;
+  isActive: boolean;
+  createdBy: string | null;
+  createdAt: string;
+  updatedAt: string;
 }

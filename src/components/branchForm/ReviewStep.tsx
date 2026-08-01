@@ -1,11 +1,11 @@
 import type { BranchFormData, LocationFormData, OperatingHours } from '../../hooks/useBranchForm';
-import type { User } from '../../types';
+import type { Manager } from '../../types';
 
 interface ReviewStepProps {
   formData: BranchFormData;
   locationData: LocationFormData;
   operatingHours: OperatingHours;
-  managers: User[];
+  managers: Manager[];
 }
 
 function ReviewField({ label, value }: { label: string; value: string }) {
@@ -18,7 +18,8 @@ function ReviewField({ label, value }: { label: string; value: string }) {
 }
 
 export function ReviewStep({ formData, locationData, operatingHours, managers }: ReviewStepProps) {
-  const managerName = managers.find((m) => m._id === formData.manager_id)?.name;
+  const foundManager = managers.find((m) => m.id === formData.manager_id);
+  const managerName = foundManager ? `${foundManager.firstName} ${foundManager.lastName}` : undefined;
   const sectionCls = 'p-4 rounded-ios bg-ios-gray6';
   const headingCls = 'font-semibold mb-3 text-ios-label';
 

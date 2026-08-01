@@ -23,6 +23,7 @@ import type {
   AgentService,
   BranchDetailResponse,
   PricingConfig,
+  PrinterListing,
 } from '../types';
 
 // Auth
@@ -38,6 +39,32 @@ export const superAdminAuth = {
     const response = await api.post<{ success: boolean; data: { superAdmin: SuperAdmin; token: string } }>(
       '/superadmin/register',
       { email, password, name }
+    );
+    return response.data;
+  },
+};
+
+// OTP email verification — required before a manager account can be registered (POST /auth/register
+// 403s without a verified OTP row for the email).
+export const otpService = {
+  sendManagerOTP: async (email: string) => {
+    const response = await api.post<{ success: boolean; message: string; data: { email: string; expiresIn: string } }>(
+      '/auth/register/send-otp',
+      { email }
+    );
+    return response.data;
+  },
+  verify: async (email: string, otp: string) => {
+    const response = await api.post<{ success: boolean; message: string; data: { email: string; verified: boolean } }>(
+      '/otp/verify-otp',
+      { email, otp }
+    );
+    return response.data;
+  },
+  resend: async (email: string) => {
+    const response = await api.post<{ success: boolean; message: string; data: { email: string; expiresIn: string } }>(
+      '/otp/resend-otp',
+      { email }
     );
     return response.data;
   },
@@ -214,6 +241,10 @@ export const locationService = {
     postalCode?: string;
   }) => {
     const response = await api.post<{ success: boolean; data: { id: string } }>('/locations', data);
+    return response.data.data;
+  },
+  update: async (id: string, data: { address?: string; latitude?: number; longitude?: number }) => {
+    const response = await api.put<{ success: boolean; data: { id: string } }>(`/locations/${id}`, data);
     return response.data.data;
   },
 };
@@ -635,5 +666,33 @@ export const agentServiceService = {
   setPrimary: async (id: string) => {
     const response = await api.patch<{ success: boolean; data: AgentService }>(`/agent-services/${id}/set-primary`, {});
     return response.data.data;
+  },
+};
+
+// Printer sales catalogue
+export const printerListingService = {
+  getAll: async (params?: { isActive?: boolean; limit?: number; offset?: number }) => {
+    const response = await api.get<{ success: boolean; data: PrinterListing[]; total: number }>('/printer-listings', { params });
+    return { listings: response.data.data || [], total: response.data.total ?? (response.data.data || []).length };
+  },
+  getById: async (id: string) => {
+    const response = await api.get<{ success: boolean; data: PrinterListing }>(`/printer-listings/${id}`);
+    return response.data.data;
+  },
+  create: async (data: FormData) => {
+    const response = await api.post<{ success: boolean; data: PrinterListing }>('/printer-listings', data, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    });
+    return response.data.data;
+  },
+  update: async (id: string, data: FormData) => {
+    const response = await api.put<{ success: boolean; data: PrinterListing }>(`/printer-listings/${id}`, data, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    });
+    return response.data.data;
+  },
+  delete: async (id: string) => {
+    const response = await api.delete<{ success: boolean }>(`/printer-listings/${id}`);
+    return response.data;
   },
 };

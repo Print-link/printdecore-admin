@@ -8,6 +8,8 @@ interface BranchFormNavigationProps {
   onNext: () => void;
   onCancel: () => void;
   onSubmit: () => void;
+  submitLabel?: string;
+  submittingLabel?: string;
 }
 
 export function BranchFormNavigation({
@@ -18,6 +20,8 @@ export function BranchFormNavigation({
   onNext,
   onCancel,
   onSubmit,
+  submitLabel = 'Create Branch',
+  submittingLabel = 'Creating…',
 }: BranchFormNavigationProps) {
   return (
     <div className="flex justify-between">
@@ -28,7 +32,7 @@ export function BranchFormNavigation({
         <Button onClick={onNext}>Next</Button>
       ) : (
         <Button onClick={onSubmit} disabled={isSubmitting}>
-          {isSubmitting ? 'Creating…' : 'Create Branch'}
+          {isSubmitting ? submittingLabel : submitLabel}
         </Button>
       )}
     </div>

@@ -17,6 +17,7 @@ import {
   Newspaper,
   ListPlus,
   Percent,
+  Printer,
   LogOut,
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
@@ -44,6 +45,7 @@ const navigation: { name: string; path: string; icon: ComponentType<{ className?
   { name: 'Blog Posts', path: '/blog', icon: Newspaper },
   { name: 'Waitlist', path: '/waitlist', icon: ListPlus },
   { name: 'Discounts', path: '/discounts', icon: Percent },
+  { name: 'Printer Sales', path: '/printer-sales', icon: Printer },
 ];
 
 export const Layout = ({ children }: LayoutProps) => {

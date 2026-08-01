@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import toast from 'react-hot-toast';
-import { ArrowLeft, Building2, Mail, Phone, MapPin, Layers, MoreVertical, Link2, Search, ChevronRight, Star, Crown, Percent, Clock } from 'lucide-react';
+import { ArrowLeft, Building2, Mail, Phone, MapPin, Layers, MoreVertical, Link2, Search, ChevronRight, Star, Crown, Percent, Clock, Pencil } from 'lucide-react';
 import {
   branchService,
   agentServiceService,
@@ -67,10 +67,17 @@ export const BranchDetail = () => {
                 <div className="absolute inset-0 bg-linear-to-t from-black/85 via-black/25 to-black/0" />
               </div>
 
-              <div className="absolute top-3 right-3">
+              <div className="absolute top-3 right-3 flex items-center gap-2">
                 <span className={`inline-flex px-2.5 py-0.5 text-xs font-semibold rounded-full backdrop-blur bg-white/90 ${branch.status === 'active' || !branch.status ? 'text-ios-green' : 'text-ios-secondary-label'}`}>
                   {branch.status || 'Active'}
                 </span>
+                <button
+                  onClick={() => navigate(`/branches/${branchId}/edit`)}
+                  className="p-1.5 rounded-full bg-white/90 text-ios-label hover:bg-white backdrop-blur"
+                  aria-label="Edit branch"
+                >
+                  <Pencil className="w-3.5 h-3.5" />
+                </button>
               </div>
 
               <div className="absolute inset-x-0 bottom-0 p-4 sm:p-5">

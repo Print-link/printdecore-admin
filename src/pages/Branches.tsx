@@ -2,25 +2,21 @@ import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { MoreVertical, Store, MapPin, Phone, Mail, Crown } from 'lucide-react';
-import { branchService, userService } from '../services/superAdminService';
+import { branchService } from '../services/superAdminService';
 import { LoadingSpinner } from '../components/LoadingSpinner';
 import { Layout } from '../components/Layout';
-import { Modal } from '../components/Modal';
 import { Pagination } from '../components/Pagination';
 import { PageHeader } from '../components/ui/PageHeader';
 import { Badge } from '../components/ui/Badge';
 import { Button } from '../components/ui/Button';
-import { FormField, iosInputCls } from '../components/ui/FormField';
+import { iosInputCls } from '../components/ui/FormField';
 import { getStoreOpenStatus } from '../utils/storeHours';
 import toast from 'react-hot-toast';
-import type { Branch, User } from '../types';
 
 export const Branches = () => {
   const navigate = useNavigate();
   const [page, setPage] = useState(1);
   const [search, setSearch] = useState('');
-  const [editingBranch, setEditingBranch] = useState<Branch | null>(null);
-  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [openDropdownId, setOpenDropdownId] = useState<string | null>(null);
   const dropdownRefs = useRef<{ [key: string]: HTMLDivElement | null }>({});
   const queryClient = useQueryClient();
@@ -43,29 +39,11 @@ export const Branches = () => {
     queryFn: () => branchService.getAll({ page, limit: 10, search: search || undefined }),
   });
 
-  const { data: managersData } = useQuery({
-    queryKey: ['managers'],
-    queryFn: () => userService.getAll({ limit: 100 }),
-  });
-
-  const updateMutation = useMutation({
-    mutationFn: ({ id, data }: { id: string; data: FormData }) => branchService.update(id, data),
-    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['branches'] }); toast.success('Branch updated'); setIsEditModalOpen(false); setEditingBranch(null); },
-    onError: (error: any) => { toast.error(error.response?.data?.message || 'Failed to update branch'); },
-  });
-
   const deleteMutation = useMutation({
     mutationFn: (id: string) => branchService.delete(id),
     onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['branches'] }); toast.success('Branch deleted'); },
     onError: (error: any) => { toast.error(error.response?.data?.message || 'Failed to delete branch'); },
   });
-
-  const handleSubmitEdit = (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
-    if (!editingBranch) return;
-    const formData = new FormData(e.currentTarget);
-    updateMutation.mutate({ id: editingBranch.id, data: formData });
-  };
 
   return (
     <Layout>
@@ -132,7 +110,7 @@ export const Branches = () => {
                           </button>
                           {openDropdownId === branch.id && (
                             <div className="absolute right-0 mt-1 w-36 bg-white rounded-ios shadow-ios border border-ios-gray5 py-1 z-10">
-                              <button onClick={() => { setEditingBranch(branch); setIsEditModalOpen(true); setOpenDropdownId(null); }} className="w-full text-left px-3 py-1.5 text-sm text-ios-label hover:bg-ios-gray6">Edit</button>
+                              <button onClick={() => navigate(`/branches/${branch.id}/edit`)} className="w-full text-left px-3 py-1.5 text-sm text-ios-label hover:bg-ios-gray6">Edit</button>
                               <button onClick={() => { if (window.confirm('Delete this branch?')) deleteMutation.mutate(branch.id); setOpenDropdownId(null); }} className="w-full text-left px-3 py-1.5 text-sm text-ios-red hover:bg-ios-red/10">Delete</button>
                             </div>
                           )}
@@ -174,49 +152,6 @@ export const Branches = () => {
             {data?.pagination && <Pagination {...data.pagination} onPageChange={setPage} />}
           </>
         )}
-
-        {/* Edit Modal */}
-        <Modal isOpen={isEditModalOpen} onClose={() => { setIsEditModalOpen(false); setEditingBranch(null); }} title="Edit Branch">
-          {editingBranch && (
-            <form onSubmit={handleSubmitEdit} className="space-y-4">
-              <FormField label="Branch Name">
-                <input type="text" name="name" defaultValue={editingBranch.name} required className={iosInputCls} />
-              </FormField>
-              <FormField label="Manager">
-                <select name="manager_id" defaultValue={editingBranch.manager_id} required className={iosInputCls}>
-                  {(managersData?.users as any)?.map((u: User) => (
-                    <option key={u._id} value={u._id}>{u.name} ({u.email})</option>
-                  ))}
-                </select>
-              </FormField>
-              <FormField label="Email">
-                <input type="email" name="branchEmailAddress" defaultValue={editingBranch.branchEmailAddress} required className={iosInputCls} />
-              </FormField>
-              <FormField label="Phone">
-                <input type="text" name="phoneNumber" defaultValue={editingBranch.phoneNumber} required className={iosInputCls} />
-              </FormField>
-              <FormField label="Cover Image">
-                <input type="file" name="branchCoverImage" accept="image/*" className={iosInputCls} />
-                {editingBranch.branchCoverImage && <p className="text-xs text-ios-secondary-label mt-1">Leave empty to keep current image</p>}
-              </FormField>
-              <FormField label="Paystack Subaccount ID">
-                <input type="text" name="payStackSubAccountId" defaultValue={editingBranch.payStackSubAccountId || ''} className={iosInputCls} />
-              </FormField>
-              <FormField label="Status">
-                <select name="status" defaultValue={editingBranch.status || 'active'} className={iosInputCls}>
-                  <option value="active">Active</option>
-                  <option value="inactive">Inactive</option>
-                </select>
-              </FormField>
-              <div className="flex justify-end gap-3 pt-2">
-                <Button type="button" variant="secondary" onClick={() => { setIsEditModalOpen(false); setEditingBranch(null); }}>Cancel</Button>
-                <Button type="submit" disabled={updateMutation.isPending}>
-                  {updateMutation.isPending ? 'Saving...' : 'Save Changes'}
-                </Button>
-              </div>
-            </form>
-          )}
-        </Modal>
       </div>
     </Layout>
   );
