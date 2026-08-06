@@ -26,6 +26,7 @@ import BlogPosts from "./pages/BlogPosts";
 import { Waitlist } from "./pages/Waitlist";
 import { Discounts } from "./pages/Discounts";
 import { PrinterSales } from "./pages/PrinterSales";
+import { PrinterListings } from "./pages/PrinterListings";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -59,6 +60,7 @@ const protectedRoutes = [
   { path: "/waitlist", element: <Waitlist /> },
   { path: "/discounts", element: <Discounts /> },
   { path: "/printer-sales", element: <PrinterSales /> },
+  { path: "/printer-sales/listings", element: <PrinterListings /> },
 ];
 
 function App() {

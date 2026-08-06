@@ -507,3 +507,31 @@ export interface PrinterListing {
   createdAt: string;
   updatedAt: string;
 }
+
+export type PrinterOrderPaymentMethod = 'pay_on_delivery' | 'momo';
+export type PrinterOrderStatus = 'PROCESSING' | 'OUT_FOR_DELIVERY' | 'DELIVERED' | 'CANCELLED';
+
+export interface PrinterOrder {
+  id: string;
+  clientId: string;
+  printerListingId: string;
+  quantity: number;
+  unitPrice: number;
+  deliveryFee: number;
+  totalPrice: number;
+  paymentMethod: PrinterOrderPaymentMethod;
+  paymentReference: string | null;
+  status: PrinterOrderStatus;
+  deliveryAddress: string;
+  deliveryLatitude: number;
+  deliveryLongitude: number;
+  recipientPhone: string;
+  comment: string | null;
+  createdAt: string;
+  updatedAt: string;
+  printerName?: string;
+  printerImage?: string;
+  customerName?: string;
+  customerEmail?: string;
+  customerPhone?: string;
+}

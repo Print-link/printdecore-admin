@@ -1,4 +1,5 @@
 import { Link, useLocation, useNavigate } from 'react-router-dom';
+import { useQuery } from '@tanstack/react-query';
 import type { ComponentType } from 'react';
 import {
   LayoutDashboard,
@@ -21,6 +22,7 @@ import {
   LogOut,
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
+import { printerOrderService } from '../services/superAdminService';
 import logoArt from '../assets/images/LogoArt.png';
 
 interface LayoutProps {
@@ -53,6 +55,15 @@ export const Layout = ({ children }: LayoutProps) => {
   const navigate = useNavigate();
   const { logout } = useAuth();
 
+  // Powers the "new order" badge on the Printer Sales tab — kept fresh without
+  // requiring ops to open the page to notice a new order came in.
+  const { data: printerOrdersData } = useQuery({
+    queryKey: ['printer-orders', 'badge', 'PROCESSING'],
+    queryFn: () => printerOrderService.getAll({ status: 'PROCESSING', limit: 1 }),
+    refetchInterval: 30000,
+  });
+  const newPrinterOrderCount = printerOrdersData?.total ?? 0;
+
   const handleLogout = () => {
     logout();
     navigate('/login');
@@ -71,6 +82,7 @@ export const Layout = ({ children }: LayoutProps) => {
             {navigation.map((item) => {
               const isActive = location.pathname === item.path;
               const Icon = item.icon;
+              const badgeCount = item.path === '/printer-sales' ? newPrinterOrderCount : 0;
               return (
                 <Link
                   key={item.path}
@@ -81,7 +93,12 @@ export const Layout = ({ children }: LayoutProps) => {
                     }`}
                 >
                   <Icon className="w-4 h-4 shrink-0" />
-                  {item.name}
+                  <span className="flex-1">{item.name}</span>
+                  {badgeCount > 0 && (
+                    <span className="min-w-4.5 h-4.5 px-1 flex items-center justify-center rounded-full bg-ios-red text-white text-[10px] font-semibold">
+                      {badgeCount > 99 ? '99+' : badgeCount}
+                    </span>
+                  )}
                 </Link>
               );
             })}
