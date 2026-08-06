@@ -531,6 +531,9 @@ export interface PrinterOrder {
   updatedAt: string;
   printerName?: string;
   printerImage?: string;
+  printerImages?: string[];
+  printerSpecs?: string[];
+  printerTags?: string[];
   customerName?: string;
   customerEmail?: string;
   customerPhone?: string;

@@ -2,14 +2,16 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import toast from 'react-hot-toast';
+import { Check, MapPin, Printer } from 'lucide-react';
 import { printerOrderService } from '../services/superAdminService';
 import { LoadingSpinner } from '../components/LoadingSpinner';
 import { Layout } from '../components/Layout';
-import { Modal } from '../components/Modal';
+import { Drawer } from '../components/Drawer';
+import { DeliveryLocationMap } from '../components/DeliveryLocationMap';
 import { PageHeader } from '../components/ui/PageHeader';
 import { Badge } from '../components/ui/Badge';
 import { Button } from '../components/ui/Button';
-import { FormField, iosInputCls } from '../components/ui/FormField';
+import { iosInputCls } from '../components/ui/FormField';
 import { formatDateTime } from '../utils/date';
 import type { PrinterOrder, PrinterOrderStatus } from '../types';
 
@@ -113,35 +115,108 @@ export const PrinterSales = () => {
           </div>
         )}
 
-        {/* Order Detail Modal */}
-        <Modal isOpen={!!selectedOrder} onClose={() => setSelectedOrder(null)} title="Printer Order">
+        {/* Order Detail Drawer */}
+        <Drawer isOpen={!!selectedOrder} onClose={() => setSelectedOrder(null)} title="Printer Order">
           {selectedOrder && (
-            <div className="space-y-4">
-              <div className="grid grid-cols-2 gap-4">
-                <Field label="Printer" value={`${selectedOrder.printerName || '-'} × ${selectedOrder.quantity}`} />
-                <Field label="Unit Price" value={`GHS ${selectedOrder.unitPrice.toFixed(2)}`} />
-                <Field label="Delivery Fee" value={`GHS ${selectedOrder.deliveryFee.toFixed(2)}`} />
-                <Field label="Total" value={`GHS ${selectedOrder.totalPrice.toFixed(2)}`} />
-                <Field label="Customer" value={selectedOrder.customerName || '-'} />
-                <Field label="Customer Email" value={selectedOrder.customerEmail || '-'} />
-                <Field label="Recipient Phone" value={selectedOrder.recipientPhone} />
-                <Field label="Payment Method" value={selectedOrder.paymentMethod === 'momo' ? 'Mobile Money' : 'Pay on Delivery'} />
-                {selectedOrder.paymentReference && <Field label="Payment Reference" value={selectedOrder.paymentReference} />}
-                <Field label="Created" value={formatDateTime(selectedOrder.createdAt)} />
-                <Field label="Updated" value={formatDateTime(selectedOrder.updatedAt)} />
+            <div className="space-y-5">
+              <div className="flex items-center justify-between">
+                <span className="font-mono text-xs text-ios-secondary-label">#{selectedOrder.id.slice(-8)}</span>
+                <Badge variant={statusVariant[selectedOrder.status]}>{selectedOrder.status.replace(/_/g, ' ')}</Badge>
               </div>
 
+              {/* Item ordered — images, name, price, specs */}
+              <div className="border border-ios-gray5 rounded-ios overflow-hidden">
+                {selectedOrder.printerImages && selectedOrder.printerImages.length > 0 ? (
+                  <>
+                    <img src={selectedOrder.printerImages[0]} alt="" className="w-full h-40 object-cover bg-ios-gray6" />
+                    {selectedOrder.printerImages.length > 1 && (
+                      <div className="flex gap-1.5 p-1.5 overflow-x-auto bg-ios-gray6">
+                        {selectedOrder.printerImages.slice(1).map((url) => (
+                          <img key={url} src={url} alt="" className="w-12 h-12 rounded object-cover shrink-0 border border-ios-gray5" />
+                        ))}
+                      </div>
+                    )}
+                  </>
+                ) : (
+                  <div className="w-full h-32 bg-ios-gray6 flex items-center justify-center">
+                    <Printer className="w-8 h-8 text-ios-gray3" />
+                  </div>
+                )}
+
+                <div className="p-3.5">
+                  <p className="text-sm font-semibold text-ios-label">{selectedOrder.printerName || 'Printer'}</p>
+                  {selectedOrder.printerTags && selectedOrder.printerTags.length > 0 && (
+                    <div className="flex flex-wrap gap-1.5 mt-1.5">
+                      {selectedOrder.printerTags.map((tag) => (
+                        <Badge key={tag} variant="warning">{tag}</Badge>
+                      ))}
+                    </div>
+                  )}
+
+                  {selectedOrder.printerSpecs && selectedOrder.printerSpecs.length > 0 && (
+                    <div className="mt-3 space-y-1.5">
+                      {selectedOrder.printerSpecs.map((spec) => (
+                        <div key={spec} className="flex items-start gap-1.5 text-xs text-ios-secondary-label">
+                          <Check className="w-3.5 h-3.5 text-brand-hover shrink-0 mt-0.5" />
+                          <span>{spec}</span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+
+                  <div className="mt-3 pt-3 border-t border-ios-gray5 space-y-1 text-sm">
+                    <div className="flex justify-between text-ios-secondary-label">
+                      <span>GHS {selectedOrder.unitPrice.toFixed(2)} × {selectedOrder.quantity}</span>
+                      <span>GHS {(selectedOrder.unitPrice * selectedOrder.quantity).toFixed(2)}</span>
+                    </div>
+                    <div className="flex justify-between text-ios-secondary-label">
+                      <span>Delivery fee</span>
+                      <span>{selectedOrder.deliveryFee > 0 ? `GHS ${selectedOrder.deliveryFee.toFixed(2)}` : 'Free'}</span>
+                    </div>
+                    <div className="flex justify-between font-semibold text-ios-label pt-1">
+                      <span>Total</span>
+                      <span>GHS {selectedOrder.totalPrice.toFixed(2)}</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Customer */}
               <div>
-                <p className="text-xs font-medium text-ios-secondary-label mb-1">Delivery Address</p>
-                <p className="text-sm text-ios-label bg-ios-gray6 rounded-ios p-3">{selectedOrder.deliveryAddress}</p>
+                <p className="text-xs font-semibold text-ios-secondary-label uppercase tracking-wide mb-1.5">Customer</p>
+                <div className="grid grid-cols-2 gap-3">
+                  <Field label="Name" value={selectedOrder.customerName || '-'} />
+                  <Field label="Recipient Phone" value={selectedOrder.recipientPhone} />
+                  <Field label="Email" value={selectedOrder.customerEmail || '-'} />
+                  <Field label="Payment" value={selectedOrder.paymentMethod === 'momo' ? 'Mobile Money' : 'Pay on Delivery'} />
+                </div>
+              </div>
+
+              {/* Delivery — address + map */}
+              <div>
+                <p className="text-xs font-semibold text-ios-secondary-label uppercase tracking-wide mb-1.5">Delivery</p>
+                <p className="flex items-start gap-1.5 text-sm text-ios-label bg-ios-gray6 rounded-ios p-3 mb-2">
+                  <MapPin className="w-4 h-4 text-brand-hover shrink-0 mt-0.5" />
+                  {selectedOrder.deliveryAddress}
+                </p>
+                <DeliveryLocationMap latitude={selectedOrder.deliveryLatitude} longitude={selectedOrder.deliveryLongitude} />
               </div>
 
               {selectedOrder.comment && (
                 <div>
-                  <p className="text-xs font-medium text-ios-secondary-label mb-1">Notes for the rider</p>
+                  <p className="text-xs font-semibold text-ios-secondary-label uppercase tracking-wide mb-1.5">Notes for the rider</p>
                   <p className="text-sm text-ios-label bg-ios-gray6 rounded-ios p-3 whitespace-pre-wrap">{selectedOrder.comment}</p>
                 </div>
               )}
+
+              {selectedOrder.paymentReference && (
+                <Field label="Payment Reference" value={selectedOrder.paymentReference} />
+              )}
+
+              <div className="grid grid-cols-2 gap-3">
+                <Field label="Created" value={formatDateTime(selectedOrder.createdAt)} />
+                <Field label="Updated" value={formatDateTime(selectedOrder.updatedAt)} />
+              </div>
 
               <div className="border border-ios-gray5 rounded-ios p-4 space-y-3 bg-ios-gray6">
                 <p className="text-xs font-semibold text-ios-secondary-label uppercase tracking-wide">Update Status</p>
@@ -166,7 +241,7 @@ export const PrinterSales = () => {
               </div>
             </div>
           )}
-        </Modal>
+        </Drawer>
       </div>
     </Layout>
   );
