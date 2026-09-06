@@ -1,5 +1,5 @@
 import api from '../config/api';
-import type { Order, OrderStatus } from '../types';
+import type { Order, OrderStatus, PrintRequest } from '../types';
 
 export const orderService = {
   getAll: async (params?: { page?: number; limit?: number; status?: string; branchId?: string; search?: string }) => {
@@ -53,15 +53,38 @@ export interface Quotation {
   acceptedAt?: string;
   createdAt: string;
   updatedAt: string;
+  // Enrichment from the backend's queue query
+  orderStatus?: OrderStatus;
+  customerName?: string;
+  customerEmail?: string;
+  /** Set when the order came from a Print Assistance request. */
+  printRequestId?: string;
+  requestNumber?: string;
+  serviceName?: string;
+  /** The catalog's instant estimate, if the service has one — a starting point, never charged directly. */
+  referencePrice?: number;
 }
 
 export const quotationService = {
-  getAll: async (status?: Quotation['status']) => {
-    const response = await api.get<{ success: boolean; data: Quotation[] }>('/quotations', { params: status ? { status } : undefined });
+  getAll: async (status?: Quotation['status'], orderId?: string) => {
+    const params: Record<string, string> = {};
+    if (status) params.status = status;
+    if (orderId) params.orderId = orderId;
+    const response = await api.get<{ success: boolean; data: Quotation[] }>('/quotations', {
+      params: Object.keys(params).length ? params : undefined,
+    });
     return response.data.data || [];
   },
   send: async (id: string, amount: number) => {
     const response = await api.patch<{ success: boolean; data: Quotation }>(`/quotations/${id}/send`, { amount });
     return response.data.data;
+  },
+};
+
+// Print Assistance requests — the structured spec behind a quote-on-request order
+export const printRequestService = {
+  getByOrderId: async (orderId: string) => {
+    const response = await api.get<{ success: boolean; data: PrintRequest[] }>('/print-requests', { params: { orderId } });
+    return response.data.data?.[0] ?? null;
   },
 };

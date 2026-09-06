@@ -1,5 +1,6 @@
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
+import { useEffect, useState } from 'react';
 import type { ComponentType } from 'react';
 import {
   LayoutDashboard,
@@ -20,6 +21,7 @@ import {
   Percent,
   Printer,
   LogOut,
+  ChevronDown,
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { printerOrderService } from '../services/superAdminService';
@@ -29,26 +31,87 @@ interface LayoutProps {
   children: React.ReactNode;
 }
 
-const navigation: { name: string; path: string; icon: ComponentType<{ className?: string }> }[] = [
+type NavIcon = ComponentType<{ className?: string }>;
+
+interface NavItem {
+  name: string;
+  path: string;
+  icon: NavIcon;
+}
+
+interface NavGroup {
+  id: string;
+  label: string;
+  icon: NavIcon;
+  items: NavItem[];
+}
+
+// Standalone links shown above the collapsible groups.
+const topLevel: NavItem[] = [
   { name: 'Dashboard', path: '/dashboard', icon: LayoutDashboard },
-  { name: 'Branches', path: '/branches', icon: Building2 },
-  { name: 'Managers', path: '/managers', icon: UserCog },
-  { name: 'Clerks', path: '/clerks', icon: Users },
-  { name: 'Clients', path: '/clients', icon: Users },
-  { name: 'Orders', path: '/orders', icon: ShoppingBag },
-  { name: 'Quotation Queue', path: '/quotations', icon: FileText },
-  { name: 'Services', path: '/services', icon: Layers },
-  { name: 'Billing & Plans', path: '/billing', icon: CreditCard },
-  { name: 'Reports', path: '/reports', icon: BarChart3 },
-  { name: 'WhatsApp', path: '/whatsapp', icon: MessageCircle },
-  { name: 'Activity Logs', path: '/activity-logs', icon: History },
-  { name: 'Roles & Permissions', path: '/roles', icon: ShieldCheck },
-  { name: 'Support Tickets', path: '/support', icon: LifeBuoy },
-  { name: 'Blog Posts', path: '/blog', icon: Newspaper },
-  { name: 'Waitlist', path: '/waitlist', icon: ListPlus },
-  { name: 'Discounts', path: '/discounts', icon: Percent },
-  { name: 'Printer Sales', path: '/printer-sales', icon: Printer },
 ];
+
+const groups: NavGroup[] = [
+  {
+    id: 'operations',
+    label: 'Operations',
+    icon: ShoppingBag,
+    items: [
+      { name: 'Orders', path: '/orders', icon: ShoppingBag },
+      { name: 'Quotation Queue', path: '/quotations', icon: FileText },
+      { name: 'Printer Sales', path: '/printer-sales', icon: Printer },
+      { name: 'Services', path: '/services', icon: Layers },
+      { name: 'Discounts', path: '/discounts', icon: Percent },
+    ],
+  },
+  {
+    id: 'organization',
+    label: 'Organization',
+    icon: Building2,
+    items: [
+      { name: 'Branches', path: '/branches', icon: Building2 },
+      { name: 'Managers', path: '/managers', icon: UserCog },
+      { name: 'Clerks', path: '/clerks', icon: Users },
+      { name: 'Clients', path: '/clients', icon: Users },
+    ],
+  },
+  {
+    id: 'engagement',
+    label: 'Engagement',
+    icon: MessageCircle,
+    items: [
+      { name: 'WhatsApp', path: '/whatsapp', icon: MessageCircle },
+      { name: 'Support Tickets', path: '/support', icon: LifeBuoy },
+      { name: 'Blog Posts', path: '/blog', icon: Newspaper },
+      { name: 'Waitlist', path: '/waitlist', icon: ListPlus },
+    ],
+  },
+  {
+    id: 'admin',
+    label: 'Administration',
+    icon: ShieldCheck,
+    items: [
+      { name: 'Billing & Plans', path: '/billing', icon: CreditCard },
+      { name: 'Reports', path: '/reports', icon: BarChart3 },
+      { name: 'Activity Logs', path: '/activity-logs', icon: History },
+      { name: 'Roles & Permissions', path: '/roles', icon: ShieldCheck },
+    ],
+  },
+];
+
+const OPEN_GROUPS_KEY = 'admin-nav-open-groups';
+
+const readStoredOpenGroups = (): string[] | null => {
+  try {
+    const raw = localStorage.getItem(OPEN_GROUPS_KEY);
+    return raw ? (JSON.parse(raw) as string[]) : null;
+  } catch {
+    return null;
+  }
+};
+
+const groupForPath = (pathname: string) =>
+  groups.find((g) => g.items.some((item) => pathname.startsWith(item.path)));
 
 export const Layout = ({ children }: LayoutProps) => {
   const location = useLocation();
@@ -64,9 +127,69 @@ export const Layout = ({ children }: LayoutProps) => {
   });
   const newPrinterOrderCount = printerOrdersData?.total ?? 0;
 
+  const badgeFor = (path: string) => (path === '/printer-sales' ? newPrinterOrderCount : 0);
+
+  // Open groups: restored from storage, and always include the group that owns
+  // the current route so the active link is never hidden.
+  const [openGroups, setOpenGroups] = useState<Set<string>>(() => {
+    const stored = readStoredOpenGroups();
+    const initial = new Set(stored ?? groups.map((g) => g.id));
+    const active = groupForPath(location.pathname);
+    if (active) initial.add(active.id);
+    return initial;
+  });
+
+  useEffect(() => {
+    const active = groupForPath(location.pathname);
+    if (active && !openGroups.has(active.id)) {
+      setOpenGroups((prev) => new Set(prev).add(active.id));
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [location.pathname]);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem(OPEN_GROUPS_KEY, JSON.stringify([...openGroups]));
+    } catch {
+      /* storage unavailable — ignore */
+    }
+  }, [openGroups]);
+
+  const toggleGroup = (id: string) => {
+    setOpenGroups((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
+
   const handleLogout = () => {
     logout();
     navigate('/login');
+  };
+
+  const renderLink = (item: NavItem, nested = false) => {
+    const isActive = location.pathname === item.path;
+    const Icon = item.icon;
+    const badgeCount = badgeFor(item.path);
+    return (
+      <Link
+        key={item.path}
+        to={item.path}
+        className={`flex items-center gap-2.5 py-2 rounded-xl text-sm font-medium transition-colors ${
+          nested ? 'pl-9 pr-3' : 'px-3'
+        } ${
+          isActive
+            ? 'bg-white shadow-ios text-ios-label'
+            : 'text-ios-secondary-label hover:bg-black/5'
+        }`}
+      >
+        <Icon className="w-4 h-4 shrink-0" />
+        <span className="flex-1 truncate">{item.name}</span>
+        {badgeCount > 0 && <Badge count={badgeCount} />}
+      </Link>
+    );
   };
 
   return (
@@ -78,28 +201,40 @@ export const Layout = ({ children }: LayoutProps) => {
             <img src={logoArt} alt="PrintDecore" className="h-28 w-auto" />
           </div>
 
-          <nav className="flex-1 overflow-y-auto space-y-0.5">
-            {navigation.map((item) => {
-              const isActive = location.pathname === item.path;
-              const Icon = item.icon;
-              const badgeCount = item.path === '/printer-sales' ? newPrinterOrderCount : 0;
+          <nav className="flex-1 overflow-y-auto space-y-6 pr-1">
+            <div className="space-y-1">{topLevel.map((item) => renderLink(item))}</div>
+
+            {groups.map((group) => {
+              const isOpen = openGroups.has(group.id);
+              const containsActive = group.items.some((item) => item.path === location.pathname);
+              const hiddenBadge = isOpen
+                ? 0
+                : group.items.reduce((sum, item) => sum + badgeFor(item.path), 0);
+              const GroupIcon = group.icon;
               return (
-                <Link
-                  key={item.path}
-                  to={item.path}
-                  className={`flex items-center gap-2.5 px-3 py-2 rounded-xl text-sm font-medium transition-colors ${isActive
-                      ? 'bg-white shadow-ios text-ios-label'
-                      : 'text-ios-secondary-label hover:bg-black/5'
+                <div key={group.id} className="space-y-1">
+                  <button
+                    type="button"
+                    onClick={() => toggleGroup(group.id)}
+                    aria-expanded={isOpen}
+                    className={`flex items-center gap-2.5 w-full px-3 py-2 rounded-xl text-sm font-semibold transition-colors hover:bg-black/5 ${
+                      containsActive && !isOpen ? 'text-ios-label' : 'text-ios-secondary-label'
                     }`}
-                >
-                  <Icon className="w-4 h-4 shrink-0" />
-                  <span className="flex-1">{item.name}</span>
-                  {badgeCount > 0 && (
-                    <span className="min-w-4.5 h-4.5 px-1 flex items-center justify-center rounded-full bg-ios-red text-white text-[10px] font-semibold">
-                      {badgeCount > 99 ? '99+' : badgeCount}
-                    </span>
+                  >
+                    <GroupIcon className="w-4 h-4 shrink-0" />
+                    <span className="flex-1 text-left">{group.label}</span>
+                    {hiddenBadge > 0 && <Badge count={hiddenBadge} />}
+                    <ChevronDown
+                      className={`w-4 h-4 shrink-0 transition-transform ${isOpen ? '' : '-rotate-90'}`}
+                    />
+                  </button>
+
+                  {isOpen && (
+                    <div className="space-y-1">
+                      {group.items.map((item) => renderLink(item, true))}
+                    </div>
                   )}
-                </Link>
+                </div>
               );
             })}
           </nav>
@@ -123,3 +258,9 @@ export const Layout = ({ children }: LayoutProps) => {
     </div>
   );
 };
+
+const Badge = ({ count }: { count: number }) => (
+  <span className="min-w-4.5 h-4.5 px-1 flex items-center justify-center rounded-full bg-ios-red text-white text-[10px] font-semibold">
+    {count > 99 ? '99+' : count}
+  </span>
+);

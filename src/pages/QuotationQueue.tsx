@@ -1,7 +1,15 @@
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { FileText } from 'lucide-react';
-import { quotationService, orderService, branchService, type Quotation } from '../services/superAdminService';
+import { useNavigate } from 'react-router-dom';
+import toast from 'react-hot-toast';
+import { FileText, MessageSquare } from 'lucide-react';
+import {
+  quotationService,
+  orderService,
+  branchService,
+  printRequestService,
+  type Quotation,
+} from '../services/superAdminService';
 import { LoadingSpinner } from '../components/LoadingSpinner';
 import { Layout } from '../components/Layout';
 import { Modal } from '../components/Modal';
@@ -11,6 +19,8 @@ import { Badge } from '../components/ui/Badge';
 import { Button } from '../components/ui/Button';
 import { FormField, iosInputCls } from '../components/ui/FormField';
 import { OrderItemsTable } from '../components/order/OrderItemsTable';
+import { PrintRequestSpec } from '../components/order/PrintRequestSpec';
+import { QuoteComposer } from '../components/order/QuoteComposer';
 import type { Order } from '../types';
 
 type BadgeVariant = 'success' | 'neutral' | 'warning' | 'danger';
@@ -22,11 +32,23 @@ const statusVariant: Record<Quotation['status'], BadgeVariant> = {
   REJECTED: 'danger',
 };
 
+const statusLabel: Record<Quotation['status'], string> = {
+  PENDING: 'Needs a price',
+  SENT: 'Awaiting customer',
+  ACCEPTED: 'Accepted',
+  REJECTED: 'Changes requested',
+};
+
+const money = (n: number) => `GHS ${n.toLocaleString('en-GH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+
+const quoteTitle = (q: Quotation) => q.requestNumber || `#${q.orderId.slice(-8)}`;
+
 export const QuotationQueue = () => {
   const [statusFilter, setStatusFilter] = useState<Quotation['status'] | ''>('PENDING');
   const [reviewing, setReviewing] = useState<Quotation | null>(null);
-  const [amountDraft, setAmountDraft] = useState('');
+  const [branchDraft, setBranchDraft] = useState('');
   const queryClient = useQueryClient();
+  const navigate = useNavigate();
 
   const { data: quotations = [], isLoading } = useQuery({
     queryKey: ['quotations', statusFilter],
@@ -39,42 +61,45 @@ export const QuotationQueue = () => {
     enabled: !!reviewing,
   });
 
+  // The structured spec behind a Print Assistance request — the thing ops
+  // actually prices. Plain complex orders fall back to their items + comment.
+  const { data: printRequest, isLoading: isLoadingSpec } = useQuery({
+    queryKey: ['printRequest', 'byOrder', reviewing?.orderId],
+    queryFn: () => printRequestService.getByOrderId(reviewing!.orderId),
+    enabled: !!reviewing?.printRequestId,
+  });
+
   const { data: branches } = useQuery({
     queryKey: ['branches', 'for-reassignment'],
     queryFn: () => branchService.getAll({ limit: 500 }),
     enabled: !!reviewing,
   });
 
-  const sendMutation = useMutation({
-    mutationFn: ({ id, amount }: { id: string; amount: number }) => quotationService.send(id, amount),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['quotations'] });
-      setReviewing(null);
-      setAmountDraft('');
-    },
-  });
-
   const reassignMutation = useMutation({
     mutationFn: ({ id, branchId }: { id: string; branchId: string }) => orderService.reassignBranch(id, branchId),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['order', reviewing?.orderId] });
+      setBranchDraft('');
+      toast.success('Production partner reassigned');
     },
+    onError: (e: any) => toast.error(e.response?.data?.message || 'Failed to reassign'),
   });
-
-  const [branchDraft, setBranchDraft] = useState('');
 
   const openReview = (quotation: Quotation) => {
     setReviewing(quotation);
-    setAmountDraft(quotation.amount ? String(quotation.amount) : '');
     setBranchDraft('');
   };
+
+  // Keep the modal's quotation in sync after a send so the status pill and
+  // "resend" copy update without closing and reopening.
+  const liveReviewing = reviewing ? quotations.find((q) => q.id === reviewing.id) ?? reviewing : null;
 
   return (
     <Layout>
       <div>
         <PageHeader
           title="Quotation Queue"
-          subtitle="Orders waiting on operations to confirm vendor availability and a final price before the customer can pay."
+          subtitle="Quote-on-request orders. Enter the amount the customer pays and send it — they get an email, a push, and an Accept & Pay button in their chat."
         />
 
         <div className="flex gap-3 mb-4">
@@ -84,10 +109,10 @@ export const QuotationQueue = () => {
             className={`max-w-xs ${iosInputCls}`}
           >
             <option value="">All</option>
-            <option value="PENDING">Pending (needs a price)</option>
+            <option value="PENDING">Needs a price</option>
             <option value="SENT">Sent (awaiting customer)</option>
-            <option value="ACCEPTED">Accepted</option>
-            <option value="REJECTED">Rejected</option>
+            <option value="ACCEPTED">Accepted (awaiting payment)</option>
+            <option value="REJECTED">Changes requested</option>
           </select>
         </div>
 
@@ -104,48 +129,100 @@ export const QuotationQueue = () => {
                     <FileText className="w-5 h-5 text-brand-hover" />
                   </div>
                 }
-                title={`#${q.orderId.slice(-8)}`}
-                subtitle={`${q.kind} · ${new Date(q.createdAt).toLocaleDateString()}`}
+                title={`${quoteTitle(q)}${q.serviceName ? ` · ${q.serviceName}` : ''}`}
+                subtitle={[q.customerName || q.customerEmail, new Date(q.createdAt).toLocaleDateString()]
+                  .filter(Boolean)
+                  .join(' · ')}
                 trailing={
                   <>
                     <span className="text-sm font-medium text-ios-label">
-                      {q.amount != null ? `GHS ${q.amount.toFixed(2)}` : '-'}
+                      {q.amount != null ? money(q.amount) : q.referencePrice != null ? (
+                        <span className="text-ios-gray" title="Catalog estimate">~{money(q.referencePrice)}</span>
+                      ) : '—'}
                     </span>
-                    <Badge variant={statusVariant[q.status]}>{q.status}</Badge>
+                    <Badge variant={q.orderStatus === 'PAID' ? 'success' : statusVariant[q.status]}>
+                      {q.orderStatus === 'PAID' ? 'Paid' : statusLabel[q.status]}
+                    </Badge>
                   </>
                 }
                 chevron
               />
             ))}
             {quotations.length === 0 && (
-              <div className="px-4 py-12 text-center text-ios-gray">No quotations found</div>
+              <div className="px-4 py-12 text-center text-ios-gray">
+                {statusFilter === 'PENDING' ? 'Nothing waiting on a price — all caught up.' : 'No quotations found'}
+              </div>
             )}
           </ListGroup>
         )}
 
-        <Modal isOpen={!!reviewing} onClose={() => setReviewing(null)} title="Review Quotation" size="large">
-          {reviewing && (
+        <Modal
+          isOpen={!!liveReviewing}
+          onClose={() => setReviewing(null)}
+          title={liveReviewing ? `Quote ${quoteTitle(liveReviewing)}` : 'Review Quotation'}
+          size="large"
+        >
+          {liveReviewing && (
             <div className="space-y-4">
               {isLoadingOrder ? (
                 <div className="flex justify-center py-8"><LoadingSpinner /></div>
               ) : order ? (
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                   <Field label="Customer" value={order.customerName || order.customerEmail || '-'} />
                   <Field label="Phone" value={order.customerPhone || '-'} />
-                  <Field label="Order Status" value={order.status} />
+                  <Field label="Order status" value={order.status.replace(/_/g, ' ')} />
+                  <Field label="Production partner" value={order.branchName || order.branchId} />
                 </div>
               ) : null}
 
+              {/* What's being priced */}
+              {liveReviewing.printRequestId ? (
+                isLoadingSpec ? (
+                  <div className="flex justify-center py-6"><LoadingSpinner /></div>
+                ) : printRequest ? (
+                  <PrintRequestSpec request={printRequest} />
+                ) : null
+              ) : (
+                <>
+                  {order?.items && order.items.length > 0 && (
+                    <div>
+                      <p className="text-xs font-medium text-ios-secondary-label mb-1">
+                        Items {order.items.length > 1 ? `(${order.items.length})` : ''}
+                      </p>
+                      <OrderItemsTable items={order.items} />
+                    </div>
+                  )}
+                  {order?.comment && (
+                    <div>
+                      <p className="text-xs font-medium text-ios-secondary-label mb-1">Customer's description</p>
+                      <p className="text-sm text-ios-label bg-ios-gray6 rounded-ios p-3 whitespace-pre-wrap">{order.comment}</p>
+                    </div>
+                  )}
+                </>
+              )}
+
+              {/* The primary action */}
+              <QuoteComposer
+                quotation={liveReviewing}
+                orderStatus={order?.status ?? liveReviewing.orderStatus}
+                referencePrice={liveReviewing.referencePrice ?? printRequest?.calculatedPrice}
+                onSent={() => {
+                  // A freshly sent quote drops out of the "Needs a price" filter — close so ops isn't left staring at a row that's gone.
+                  if (statusFilter === 'PENDING') setReviewing(null);
+                }}
+              />
+
+              {/* Secondary: vendor change + jump to the order */}
               {order && (
                 <div className="border border-ios-gray5 rounded-ios p-4 space-y-2 bg-ios-gray6">
-                  <FormField label={`Branch (currently: ${order.branchName || order.branchId})`}>
+                  <FormField label="Reassign production partner">
                     <div className="flex gap-2">
                       <select
                         value={branchDraft}
                         onChange={(e) => setBranchDraft(e.target.value)}
                         className={`flex-1 ${iosInputCls}`}
                       >
-                        <option value="">Keep current branch</option>
+                        <option value="">Keep {order.branchName || 'current partner'}</option>
                         {branches?.branches
                           .filter((b) => b.id !== order.branchId)
                           .map((b) => (
@@ -162,63 +239,15 @@ export const QuotationQueue = () => {
                     </div>
                   </FormField>
                   <p className="text-xs text-ios-gray">
-                    Use this if the original vendor isn't available and a different one confirmed instead.
+                    Only if the original partner can't take the job. Reassigning doesn't change the quote.
                   </p>
                 </div>
               )}
 
-              {order?.items && order.items.length > 0 && (
-                <div>
-                  <p className="text-xs font-medium text-ios-secondary-label mb-1">
-                    Items {order.items.length > 1 ? `(${order.items.length})` : ''}
-                  </p>
-                  <OrderItemsTable items={order.items} />
-                </div>
-              )}
-
-              {order?.comment && (
-                <div>
-                  <p className="text-xs font-medium text-ios-secondary-label mb-1">Customer's description</p>
-                  <p className="text-sm text-ios-label bg-ios-gray6 rounded-ios p-3 whitespace-pre-wrap">{order.comment}</p>
-                </div>
-              )}
-
-              {reviewing.aiSummary && (
-                <div>
-                  <p className="text-xs font-medium text-ios-secondary-label mb-1">AI summary</p>
-                  <p className="text-sm text-ios-label bg-ios-gray6 rounded-ios p-3 whitespace-pre-wrap">{reviewing.aiSummary}</p>
-                </div>
-              )}
-              {!reviewing.aiSummary && (
-                <p className="text-xs text-ios-gray italic">No AI summary yet — pricing is manual for now.</p>
-              )}
-
-              <div className="border border-ios-gray5 rounded-ios p-4 space-y-2 bg-ios-gray6">
-                <FormField label="Quoted price (GHS)">
-                  <div className="flex gap-2">
-                    <input
-                      type="number"
-                      min="0"
-                      step="0.01"
-                      value={amountDraft}
-                      onChange={(e) => setAmountDraft(e.target.value)}
-                      placeholder="0.00"
-                      className={`flex-1 ${iosInputCls}`}
-                    />
-                    <Button
-                      onClick={() => {
-                        const amount = Number(amountDraft);
-                        if (amount > 0) sendMutation.mutate({ id: reviewing.id, amount });
-                      }}
-                      disabled={!amountDraft || Number(amountDraft) <= 0 || sendMutation.isPending}
-                    >
-                      {sendMutation.isPending ? 'Sending…' : 'Send to customer'}
-                    </Button>
-                  </div>
-                </FormField>
-                <p className="text-xs text-ios-gray">
-                  Sending notifies the customer and moves the order to Quoted — they pay once they accept.
-                </p>
+              <div className="flex justify-end">
+                <Button variant="ghost" size="sm" onClick={() => navigate(`/orders/${liveReviewing.orderId}`)}>
+                  <MessageSquare className="w-4 h-4" /> Open order
+                </Button>
               </div>
             </div>
           )}

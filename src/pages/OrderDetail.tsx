@@ -3,13 +3,15 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import toast from 'react-hot-toast';
 import { ArrowLeft } from 'lucide-react';
-import { orderService, branchService } from '../services/superAdminService';
+import { orderService, branchService, quotationService, printRequestService } from '../services/superAdminService';
 import { LoadingSpinner } from '../components/LoadingSpinner';
 import { Layout } from '../components/Layout';
 import { Badge } from '../components/ui/Badge';
 import { Button } from '../components/ui/Button';
 import { FormField, iosInputCls } from '../components/ui/FormField';
 import { OrderItemsTable } from '../components/order/OrderItemsTable';
+import { PrintRequestSpec } from '../components/order/PrintRequestSpec';
+import { QuoteComposer } from '../components/order/QuoteComposer';
 import { formatDateTime } from '../utils/date';
 import type { OrderStatus } from '../types';
 
@@ -51,6 +53,20 @@ export const OrderDetail = () => {
   const { data: branches } = useQuery({
     queryKey: ['branches', 'for-vendor-assignment'],
     queryFn: () => branchService.getAll({ limit: 500 }),
+  });
+
+  // Quote-on-request orders carry a quotation row from the moment they're
+  // created; pricing it is the step that unblocks everything else, so it
+  // lives here next to vendor assignment rather than only on the queue page.
+  const { data: quotations = [] } = useQuery({
+    queryKey: ['quotations', 'byOrder', orderId],
+    queryFn: () => quotationService.getAll(undefined, orderId),
+  });
+  const quotation = quotations[0];
+
+  const { data: printRequest } = useQuery({
+    queryKey: ['printRequest', 'byOrder', orderId],
+    queryFn: () => printRequestService.getByOrderId(orderId),
   });
 
   const [statusDraft, setStatusDraft] = useState<OrderStatus | ''>('');
@@ -101,9 +117,12 @@ export const OrderDetail = () => {
           <p className="text-sm text-ios-gray">Order not found.</p>
         ) : (
           <div className="space-y-4">
-            <div className="flex items-center gap-2">
-              <h1 className="text-xl font-bold text-ios-label tracking-tight font-mono">#{order.id.slice(-8)}</h1>
+            <div className="flex items-center gap-2 flex-wrap">
+              <h1 className="text-xl font-bold text-ios-label tracking-tight font-mono">
+                {printRequest?.requestNumber || `#${order.id.slice(-8)}`}
+              </h1>
               <Badge variant={statusVariant[order.status] || 'neutral'}>{order.status.replace(/_/g, ' ')}</Badge>
+              {printRequest && <Badge variant="neutral">Print Assistance</Badge>}
             </div>
 
             <div className="bg-white rounded-ios shadow-ios p-4 grid grid-cols-2 md:grid-cols-3 gap-4">
@@ -116,6 +135,16 @@ export const OrderDetail = () => {
               <Field label="Created" value={formatDateTime(order.createdAt)} />
               <Field label="Updated" value={formatDateTime(order.updatedAt)} />
             </div>
+
+            {printRequest && <PrintRequestSpec request={printRequest} />}
+
+            {quotation && (
+              <QuoteComposer
+                quotation={quotation}
+                orderStatus={order.status}
+                referencePrice={quotation.referencePrice ?? printRequest?.calculatedPrice}
+              />
+            )}
 
             {/* Ops actions — never visible to the customer */}
             <div className="border border-ios-gray5 rounded-ios p-4 space-y-4 bg-ios-gray6">
@@ -182,7 +211,7 @@ export const OrderDetail = () => {
               </Button>
             </div>
 
-            {order.comment && (
+            {order.comment && !printRequest && (
               <div>
                 <p className="text-xs font-medium text-ios-secondary-label mb-1">Customer comment</p>
                 <p className="text-sm text-ios-label bg-ios-gray6 rounded-ios p-3 whitespace-pre-wrap">{order.comment}</p>

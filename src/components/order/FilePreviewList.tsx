@@ -5,7 +5,7 @@ import type { OrderItemFile } from '../../types';
 const IMAGE_FORMATS = ['jpg', 'jpeg', 'png', 'gif', 'webp', 'svg'];
 
 const isImage = (file: OrderItemFile) => {
-  const format = (file.format || file.name.split('.').pop() || '').toLowerCase();
+  const format = (file.format || file.name?.split('.').pop() || '').toLowerCase();
   return IMAGE_FORMATS.includes(format);
 };
 

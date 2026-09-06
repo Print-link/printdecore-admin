@@ -538,3 +538,44 @@ export interface PrinterOrder {
   customerEmail?: string;
   customerPhone?: string;
 }
+
+// ==================== Print Assistance ====================
+
+export interface PrintRequestAttachment {
+  url: string;
+  name: string;
+  size?: number;
+  type?: string;
+}
+
+/**
+ * A Print Assistance request — the structured spec (catalog pick, size,
+ * quantity, options, files) that sits beside its `Order`. Ops prices it
+ * through the quotation flow; nothing here is charged directly.
+ */
+export interface PrintRequest {
+  id: string;
+  requestNumber: string;
+  orderId: string;
+  clientId: string;
+  categoryId?: string;
+  subCategoryId?: string;
+  serviceTemplateId?: string;
+  quantity?: number;
+  width?: number;
+  height?: number;
+  measurementUnit?: string;
+  selectedBaseConfigId?: string;
+  selectedOptions: string[];
+  selectedCustomSpecs: string[];
+  additionalDetails?: string;
+  attachments: PrintRequestAttachment[];
+  calculatedPrice?: number;
+  createdAt: string;
+  updatedAt: string;
+  categoryName?: string;
+  subCategoryName?: string;
+  serviceName?: string;
+  orderStatus?: OrderStatus;
+  orderTotalPrice?: number;
+}
