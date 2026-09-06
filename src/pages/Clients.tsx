@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { UserRound } from 'lucide-react';
+import { MapPin, Navigation, UserRound } from 'lucide-react';
+import { formatRelative } from '../utils/date';
 import { clientService } from '../services/superAdminService';
 import { LoadingSpinner } from '../components/LoadingSpinner';
 import { Layout } from '../components/Layout';
@@ -45,19 +46,38 @@ export const Clients = () => {
             <ListGroup>
               {data?.clients.map((client) => (
                 <ListRow
-                  key={client.email}
+                  key={client._id}
                   leading={
                     <div className="w-10 h-10 rounded-xl bg-brand/15 flex items-center justify-center">
                       <UserRound className="w-5 h-5 text-brand-hover" />
                     </div>
                   }
                   title={client.fullName}
-                  subtitle={client.email || client.phoneNumber}
+                  subtitle={[client.email, client.phoneNumber].filter(Boolean).join(' · ')}
                   trailing={
                     <>
-                      <span className="text-xs text-ios-gray hidden md:block">
-                        {client.lastLogin ? `Last login ${new Date(client.lastLogin).toLocaleDateString()}` : 'Never logged in'}
-                      </span>
+                      {client.lastLocation ? (
+                        <a
+                          href={`https://www.google.com/maps?q=${client.lastLocation.latitude},${client.lastLocation.longitude}`}
+                          target="_blank"
+                          rel="noreferrer"
+                          onClick={(e) => e.stopPropagation()}
+                          className="hidden md:flex items-center gap-1 text-xs text-ios-secondary-label hover:text-brand-hover max-w-[260px]"
+                          title={`${client.lastLocation.source === 'manual' ? 'Pinned by the customer' : 'Live location'} · ${new Date(client.lastLocation.updatedAt).toLocaleString()}`}
+                        >
+                          {client.lastLocation.source === 'manual' ? (
+                            <MapPin className="w-3.5 h-3.5 flex-shrink-0" />
+                          ) : (
+                            <Navigation className="w-3.5 h-3.5 flex-shrink-0" />
+                          )}
+                          <span className="truncate">
+                            {client.lastLocation.label || `${client.lastLocation.latitude.toFixed(4)}, ${client.lastLocation.longitude.toFixed(4)}`}
+                          </span>
+                          <span className="text-ios-gray flex-shrink-0">· {formatRelative(client.lastLocation.updatedAt)}</span>
+                        </a>
+                      ) : (
+                        <span className="text-xs text-ios-gray hidden md:block">No location yet</span>
+                      )}
                       <Badge variant={client.isActive ? 'success' : 'neutral'}>{client.isActive ? 'Active' : 'Inactive'}</Badge>
                     </>
                   }

@@ -1,5 +1,6 @@
 import type { PrintRequest } from '../../types';
 import { FilePreviewList } from './FilePreviewList';
+import { DeliveryLocationMap } from '../DeliveryLocationMap';
 
 const fileExt = (name: string) => name?.split('.').pop()?.toLowerCase() || '';
 
@@ -58,6 +59,28 @@ export const PrintRequestSpec = ({ request }: { request: PrintRequest }) => {
           <p className="text-sm text-ios-label bg-ios-gray6 rounded-ios p-3 whitespace-pre-wrap">{request.additionalDetails}</p>
         </div>
       )}
+
+      <div className="px-3 pb-3 border-t border-ios-gray5 pt-3">
+        <p className="text-xs font-medium text-ios-secondary-label mb-1">Fulfilment</p>
+        {request.fulfilmentType === 'delivery' && request.deliveryAddress ? (
+          <div className="space-y-2">
+            <p className="text-sm text-ios-label">
+              Deliver to <span className="font-medium">{request.deliveryAddress}</span>
+              {request.recipientPhone && <span className="text-ios-gray"> · {request.recipientPhone}</span>}
+            </p>
+            {request.deliveryLatitude != null && request.deliveryLongitude != null && (
+              <DeliveryLocationMap latitude={request.deliveryLatitude} longitude={request.deliveryLongitude} height={180} />
+            )}
+          </div>
+        ) : request.fulfilmentType === 'pickup' ? (
+          <p className="text-sm text-ios-label">
+            Customer will pick up from the print shop
+            {request.recipientPhone && <span className="text-ios-gray"> · {request.recipientPhone}</span>}
+          </p>
+        ) : (
+          <p className="text-xs text-ios-gray italic">Not specified — confirm in the chat before dispatch.</p>
+        )}
+      </div>
 
       <div className="px-3 pb-3">
         <p className="text-xs font-medium text-ios-secondary-label">

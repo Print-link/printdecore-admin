@@ -36,6 +36,15 @@ export interface Clerk {
   updatedAt: string;
 }
 
+export interface ClientLastLocation {
+  latitude: number;
+  longitude: number;
+  label?: string;
+  /** 'gps' = the app was following the device; 'manual' = the customer pinned it. */
+  source?: 'gps' | 'manual';
+  updatedAt: string;
+}
+
 export interface Client {
   _id: string;
   email: string;
@@ -43,6 +52,8 @@ export interface Client {
   phoneNumber: string;
   isActive: boolean;
   lastLogin?: string;
+  /** Last location the mobile app reported — ops-only, never shown to other customers. */
+  lastLocation?: ClientLastLocation;
   createdAt: string;
   updatedAt: string;
 }
@@ -571,6 +582,11 @@ export interface PrintRequest {
   additionalDetails?: string;
   attachments: PrintRequestAttachment[];
   calculatedPrice?: number;
+  fulfilmentType?: 'delivery' | 'pickup';
+  deliveryAddress?: string;
+  deliveryLatitude?: number;
+  deliveryLongitude?: number;
+  recipientPhone?: string;
   createdAt: string;
   updatedAt: string;
   categoryName?: string;
