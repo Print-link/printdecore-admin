@@ -13,6 +13,8 @@ import { OrderItemsTable } from '../components/order/OrderItemsTable';
 import { PrintRequestSpec } from '../components/order/PrintRequestSpec';
 import { QuoteComposer } from '../components/order/QuoteComposer';
 import { formatDateTime } from '../utils/date';
+import { nextStatusesFor } from '../utils/orderStatusFlow';
+import { DeliveryLocationMap } from '../components/DeliveryLocationMap';
 import type { OrderStatus } from '../types';
 
 type BadgeVariant = 'success' | 'neutral' | 'warning' | 'danger';
@@ -69,7 +71,15 @@ export const OrderDetail = () => {
     queryFn: () => printRequestService.getByOrderId(orderId),
   });
 
+  const { data: timeline = [] } = useQuery({
+    queryKey: ['order', orderId, 'timeline'],
+    queryFn: () => orderService.getTimeline(orderId),
+  });
+
   const [statusDraft, setStatusDraft] = useState<OrderStatus | ''>('');
+  const [showAllStatuses, setShowAllStatuses] = useState(false);
+  // datetime-local value; required when marking an order RECEIVED
+  const [readyByDraft, setReadyByDraft] = useState('');
   const [vendorDraft, setVendorDraft] = useState('');
   const [notesDraft, setNotesDraft] = useState('');
   const [syncedOrder, setSyncedOrder] = useState(order);
@@ -87,8 +97,14 @@ export const OrderDetail = () => {
   };
 
   const updateStatusMutation = useMutation({
-    mutationFn: ({ status }: { status: OrderStatus }) => orderService.updateStatus(orderId, status),
-    onSuccess: () => { invalidateOrders(); toast.success('Order status updated'); },
+    mutationFn: ({ status, readyBy }: { status: OrderStatus; readyBy?: string }) =>
+      orderService.updateStatus(orderId, status, undefined, readyBy ? new Date(readyBy).toISOString() : undefined),
+    onSuccess: () => {
+      invalidateOrders();
+      queryClient.invalidateQueries({ queryKey: ['order', orderId, 'timeline'] });
+      setReadyByDraft('');
+      toast.success('Order status updated');
+    },
     onError: (e: any) => toast.error(e.response?.data?.message || 'Failed to update status'),
   });
 
@@ -136,6 +152,21 @@ export const OrderDetail = () => {
               <Field label="Updated" value={formatDateTime(order.updatedAt)} />
             </div>
 
+            {order.fulfilmentType && !printRequest && (
+              <div className="bg-white rounded-ios shadow-ios p-4 space-y-3">
+                <p className="text-xs font-semibold text-ios-secondary-label uppercase tracking-wide">
+                  {order.fulfilmentType === 'pickup' ? 'Customer will pick up' : 'Deliver to'}
+                </p>
+                <div className="grid grid-cols-2 gap-4">
+                  {order.fulfilmentType === 'delivery' && <Field label="Address" value={order.deliveryAddress || '-'} />}
+                  <Field label="Contact phone" value={order.recipientPhone || order.customerPhone || '-'} />
+                </div>
+                {order.fulfilmentType === 'delivery' && order.deliveryLatitude != null && order.deliveryLongitude != null && (
+                  <DeliveryLocationMap latitude={order.deliveryLatitude} longitude={order.deliveryLongitude} />
+                )}
+              </div>
+            )}
+
             {printRequest && <PrintRequestSpec request={printRequest} />}
 
             {quotation && (
@@ -150,25 +181,61 @@ export const OrderDetail = () => {
             <div className="border border-ios-gray5 rounded-ios p-4 space-y-4 bg-ios-gray6">
               <p className="text-xs font-semibold text-ios-secondary-label uppercase tracking-wide">Operations</p>
 
-              <FormField label="Status">
-                <div className="flex gap-2">
-                  <select
-                    value={statusDraft}
-                    onChange={(e) => setStatusDraft(e.target.value as OrderStatus)}
-                    className={`flex-1 ${iosInputCls}`}
-                  >
-                    {ALL_STATUSES.map((s) => (
-                      <option key={s} value={s}>{s.replace(/_/g, ' ')}</option>
-                    ))}
-                  </select>
-                  <Button
-                    size="sm"
-                    onClick={() => statusDraft && updateStatusMutation.mutate({ status: statusDraft })}
-                    disabled={!statusDraft || statusDraft === order.status || updateStatusMutation.isPending}
-                  >
-                    {updateStatusMutation.isPending ? 'Saving…' : 'Update'}
-                  </Button>
-                </div>
+              <FormField label="Move to">
+                {(() => {
+                  const next = showAllStatuses ? ALL_STATUSES : nextStatusesFor(order.status, order.fulfilmentType);
+                  const options = [order.status, ...next.filter((s) => s !== order.status)];
+                  const needsReadyBy = statusDraft === 'RECEIVED';
+                  const blocked = !statusDraft || statusDraft === order.status || (needsReadyBy && !readyByDraft);
+                  return (
+                    <div className="space-y-2">
+                      <div className="flex gap-2">
+                        <select
+                          value={statusDraft}
+                          onChange={(e) => setStatusDraft(e.target.value as OrderStatus)}
+                          className={`flex-1 ${iosInputCls}`}
+                        >
+                          {options.map((s) => (
+                            <option key={s} value={s}>
+                              {s === order.status ? `${s.replace(/_/g, ' ')} (current)` : s.replace(/_/g, ' ')}
+                            </option>
+                          ))}
+                        </select>
+                        <Button
+                          size="sm"
+                          onClick={() =>
+                            statusDraft && !blocked && updateStatusMutation.mutate({ status: statusDraft, readyBy: readyByDraft || undefined })
+                          }
+                          disabled={blocked || updateStatusMutation.isPending}
+                        >
+                          {updateStatusMutation.isPending ? 'Saving…' : 'Update'}
+                        </Button>
+                      </div>
+                      {needsReadyBy && (
+                        <div>
+                          <p className="text-xs text-ios-secondary-label mb-1">Ready by — sent to the customer</p>
+                          <input
+                            type="datetime-local"
+                            value={readyByDraft}
+                            onChange={(e) => setReadyByDraft(e.target.value)}
+                            className={iosInputCls}
+                          />
+                        </div>
+                      )}
+                      {next.length === 0 && !showAllStatuses && (
+                        <p className="text-xs text-ios-gray">
+                          {order.status === 'PENDING' || order.status === 'CONFIRMING_AVAILABILITY' || order.status === 'QUOTED'
+                            ? 'Waiting on the quote / payment — send the price above.'
+                            : 'This order is closed.'}
+                        </p>
+                      )}
+                      <label className="flex items-center gap-2 text-xs text-ios-secondary-label">
+                        <input type="checkbox" checked={showAllStatuses} onChange={(e) => setShowAllStatuses(e.target.checked)} />
+                        Show all statuses (corrections only)
+                      </label>
+                    </div>
+                  );
+                })()}
               </FormField>
 
               <FormField label="Assigned production partner">
@@ -215,6 +282,23 @@ export const OrderDetail = () => {
               <div>
                 <p className="text-xs font-medium text-ios-secondary-label mb-1">Customer comment</p>
                 <p className="text-sm text-ios-label bg-ios-gray6 rounded-ios p-3 whitespace-pre-wrap">{order.comment}</p>
+              </div>
+            )}
+
+            {timeline.length > 0 && (
+              <div>
+                <p className="text-xs font-medium text-ios-secondary-label mb-2">History</p>
+                <ol className="bg-white rounded-ios shadow-ios divide-y divide-ios-gray5">
+                  {timeline.map((entry) => (
+                    <li key={entry.id} className="px-4 py-2.5 flex items-start justify-between gap-4 text-sm">
+                      <div>
+                        <p className="text-ios-label font-medium">{entry.status.replace(/_/g, ' ')}</p>
+                        {entry.note && <p className="text-xs text-ios-gray">{entry.note}</p>}
+                      </div>
+                      <p className="text-xs text-ios-gray whitespace-nowrap">{formatDateTime(entry.createdAt)}</p>
+                    </li>
+                  ))}
+                </ol>
               </div>
             )}
 

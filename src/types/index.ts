@@ -214,6 +214,13 @@ export interface Order {
   assignedVendorName?: string;
   /** Ops-only internal note — never shown to the customer. */
   internalNotes?: string;
+  /** Unset on orders placed before customers chose delivery or pickup. */
+  fulfilmentType?: 'delivery' | 'pickup';
+  deliveryAddress?: string;
+  deliveryLatitude?: number;
+  deliveryLongitude?: number;
+  recipientPhone?: string;
+  estimatedCompletionTime?: string;
   items?: OrderItem[];
   createdAt: string;
   updatedAt: string;

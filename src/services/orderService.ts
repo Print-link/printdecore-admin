@@ -18,8 +18,9 @@ export const orderService = {
     const response = await api.get<{ success: boolean; data: Order }>(`/orders/${id}`);
     return response.data.data;
   },
-  updateStatus: async (id: string, status: OrderStatus, note?: string) => {
-    const response = await api.put<{ success: boolean; data: Order }>(`/orders/${id}`, { status, note });
+  /** `estimatedCompletionTime` is what the customer's "received, ready by …" message quotes — send it with RECEIVED. */
+  updateStatus: async (id: string, status: OrderStatus, note?: string, estimatedCompletionTime?: string) => {
+    const response = await api.put<{ success: boolean; data: Order }>(`/orders/${id}`, { status, note, estimatedCompletionTime });
     return response.data.data;
   },
   assignVendor: async (id: string, vendorId: string) => {

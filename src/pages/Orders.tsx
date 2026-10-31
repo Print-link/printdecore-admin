@@ -44,6 +44,7 @@ export const Orders = () => {
   const { data, isLoading } = useQuery({
     queryKey: ['orders', page, statusFilter],
     queryFn: () => orderService.getAll({ page, limit: 15, status: statusFilter || undefined }),
+    refetchInterval: 30_000,
   });
 
   return (
