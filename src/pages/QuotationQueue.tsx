@@ -53,6 +53,7 @@ export const QuotationQueue = () => {
   const { data: quotations = [], isLoading } = useQuery({
     queryKey: ['quotations', statusFilter],
     queryFn: () => quotationService.getAll(statusFilter || undefined),
+    refetchInterval: 20_000,
   });
 
   const { data: order, isLoading: isLoadingOrder } = useQuery<Order>({

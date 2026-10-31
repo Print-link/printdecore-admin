@@ -26,6 +26,7 @@ import {
 import { useAuth } from '../contexts/AuthContext';
 import { printerOrderService } from '../services/superAdminService';
 import logoArt from '../assets/images/LogoArt.png';
+import { useNewOrderAlerts } from '../hooks/useNewOrderAlerts';
 
 interface LayoutProps {
   children: React.ReactNode;
@@ -126,8 +127,10 @@ export const Layout = ({ children }: LayoutProps) => {
     refetchInterval: 30000,
   });
   const newPrinterOrderCount = printerOrdersData?.total ?? 0;
+  const ordersNeedingPrice = useNewOrderAlerts();
 
-  const badgeFor = (path: string) => (path === '/printer-sales' ? newPrinterOrderCount : 0);
+  const badgeFor = (path: string) =>
+    path === '/printer-sales' ? newPrinterOrderCount : path === '/quotations' ? ordersNeedingPrice : 0;
 
   // Open groups: restored from storage, and always include the group that owns
   // the current route so the active link is never hidden.

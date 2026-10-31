@@ -93,7 +93,13 @@ export const QuoteComposer = ({ quotation, orderStatus, referencePrice, onSent }
                 className={`flex-1 text-lg font-semibold ${iosInputCls}`}
               />
               <Button onClick={submit} disabled={!valid || unchanged || sendMutation.isPending}>
-                {sendMutation.isPending ? 'Sending…' : isResend ? 'Send updated quote' : 'Send quote to customer'}
+                {sendMutation.isPending
+                  ? 'Sending…'
+                  : isResend
+                    ? 'Send updated quote'
+                    : quotation.kind === 'standard'
+                      ? 'Confirm & send price'
+                      : 'Send quote to customer'}
               </Button>
             </div>
           </FormField>
@@ -108,7 +114,9 @@ export const QuoteComposer = ({ quotation, orderStatus, referencePrice, onSent }
           <p className="text-xs text-ios-gray">
             {isResend
               ? 'Sending again replaces the previous price and notifies the customer.'
-              : 'The customer gets an email and a push notification, and the quote appears in their chat with an Accept & Pay button.'}
+              : quotation.kind === 'standard'
+                ? 'This is the price the customer saw when ordering. Once the print shop confirms, send it — they get a push notification to pay.'
+                : 'The customer gets an email and a push notification, and the quote appears in their chat with an Accept & Pay button.'}
           </p>
         </>
       )}
