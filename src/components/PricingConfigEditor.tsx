@@ -3,6 +3,7 @@ import toast from 'react-hot-toast';
 import { X, Plus, Trash2, ChevronDown, ChevronRight, Star, FlaskConical } from 'lucide-react';
 import { Modal } from './Modal';
 import { PricingSimulator } from './PricingSimulator';
+import type { PricingSource } from '../services/pricingService';
 import { Button } from './ui/Button';
 import { Badge } from './ui/Badge';
 import { FormField, iosInputCls } from './ui/FormField';
@@ -27,6 +28,8 @@ const defaultConfigFor = (initialConfig: PricingConfig | null | undefined, fallb
 
 interface PricingConfigEditorProps {
   title: string;
+  /** The saved service being priced, so the simulator can price drafts on the server. */
+  source: PricingSource;
   subtitle?: string;
   initialConfig?: PricingConfig | null;
   fallbackPrice?: number;
@@ -36,7 +39,7 @@ interface PricingConfigEditorProps {
   onSave: (config: PricingConfig, activate: boolean) => void;
 }
 
-export const PricingConfigEditor = ({ title, subtitle, initialConfig, fallbackPrice, isOpen, isSaving, onClose, onSave }: PricingConfigEditorProps) => {
+export const PricingConfigEditor = ({ title, source, subtitle, initialConfig, fallbackPrice, isOpen, isSaving, onClose, onSave }: PricingConfigEditorProps) => {
   const [config, setConfig] = useState<PricingConfig>(() => defaultConfigFor(initialConfig, fallbackPrice));
   const [optionsOpen, setOptionsOpen] = useState(false);
   const [customSpecsOpen, setCustomSpecsOpen] = useState(false);
@@ -333,7 +336,7 @@ export const PricingConfigEditor = ({ title, subtitle, initialConfig, fallbackPr
       <AddBaseConfigDialog isOpen={addBaseConfigOpen} onClose={() => setAddBaseConfigOpen(false)} onAdd={addBaseConfig} />
       <AddOptionDialog isOpen={addOptionOpen} onClose={() => setAddOptionOpen(false)} onAdd={addOption} />
       <AddCustomSpecDialog isOpen={addCustomSpecOpen} onClose={() => setAddCustomSpecOpen(false)} onAdd={addCustomSpec} />
-      <PricingSimulator config={config} isOpen={simulateOpen} onClose={() => setSimulateOpen(false)} />
+      <PricingSimulator config={config} source={source} isOpen={simulateOpen} onClose={() => setSimulateOpen(false)} />
     </div>
   );
 };

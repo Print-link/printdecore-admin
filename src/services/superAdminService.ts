@@ -12,6 +12,7 @@ export * from './branchService';
 export * from './billingService';
 export * from './orderService';
 export * from './marketplaceService';
+export * from './pricingService';
 export * from './activityLogService';
 export * from './roleService';
 export * from './reportService';

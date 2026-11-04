@@ -539,6 +539,7 @@ function TemplatesTab() {
       {configuring && (
         <PricingConfigEditor
           title={configuring.name}
+          source={{ serviceTemplateId: configuring.id }}
           initialConfig={configuring.pricingConfig}
           fallbackPrice={configuring.pricePerUnit}
           isOpen

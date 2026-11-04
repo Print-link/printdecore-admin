@@ -1,8 +1,10 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useState } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { X, Upload, FileText, Loader2 } from 'lucide-react';
 import * as pdfjsLib from 'pdfjs-dist';
 import pdfWorkerUrl from 'pdfjs-dist/build/pdf.worker.min.mjs?url';
 import type { PricingConfig } from '../types';
+import { pricingService, type PricingSource } from '../services/pricingService';
 
 pdfjsLib.GlobalWorkerOptions.workerSrc = pdfWorkerUrl;
 
@@ -14,33 +16,51 @@ const countPdfPages = async (file: File): Promise<number> => {
 
 interface PricingSimulatorProps {
   config: PricingConfig;
+  /** The saved service this setup belongs to; the server prices the draft `config` against it. */
+  source: PricingSource;
   isOpen: boolean;
   onClose: () => void;
 }
 
-export const PricingSimulator = ({ config, isOpen, onClose }: PricingSimulatorProps) => {
+export const PricingSimulator = ({ config, source, isOpen, onClose }: PricingSimulatorProps) => {
   const [baseConfigId, setBaseConfigId] = useState(config.baseConfigurations[0]?.id ?? '');
   const [optionIds, setOptionIds] = useState<Set<string>>(
     () => new Set(config.options.filter((o) => o.enabled && o.default).map((o) => o.id))
   );
   const [specIds, setSpecIds] = useState<Set<string>>(new Set());
   const [quantity, setQuantity] = useState(1);
+  const [pages, setPages] = useState('');
+  const [width, setWidth] = useState('');
+  const [height, setHeight] = useState('');
   const [fileName, setFileName] = useState<string | null>(null);
   const [isCounting, setIsCounting] = useState(false);
   const [pdfError, setPdfError] = useState<string | null>(null);
 
-  const selectedBaseConfig = config.baseConfigurations.find((bc) => bc.id === baseConfigId);
+  // Priced by the server's engine (the one real orders use), never by arithmetic here.
+  // Inputs settle for a moment first, so typing "500" isn't three requests.
+  const sample = {
+    quantity: Math.max(1, quantity),
+    filePages: pages ? Number(pages) : undefined,
+    width: width ? Number(width) : undefined,
+    height: height ? Number(height) : undefined,
+    selectedBaseConfigId: baseConfigId || undefined,
+    selectedOptions: [...optionIds],
+    selectedCustomSpecs: [...specIds],
+  };
+  const [settled, setSettled] = useState(sample);
+  const sampleKey = JSON.stringify(sample);
+  useEffect(() => {
+    const id = setTimeout(() => setSettled(JSON.parse(sampleKey)), 300);
+    return () => clearTimeout(id);
+  }, [sampleKey]);
 
-  const total = useMemo(() => {
-    const base = (selectedBaseConfig?.unitPrice || 0) * Math.max(1, quantity);
-    const options = config.options
-      .filter((o) => o.enabled && optionIds.has(o.id))
-      .reduce((sum, o) => sum + o.priceModifier, 0);
-    const specs = config.customSpecifications
-      .filter((s) => specIds.has(s.id))
-      .reduce((sum, s) => sum + s.priceModifier, 0);
-    return base + options + specs;
-  }, [selectedBaseConfig, quantity, optionIds, specIds, config]);
+  const quote = useQuery({
+    queryKey: ['pricing-preview', source, config, settled],
+    queryFn: () => pricingService.preview(source, settled, config),
+    enabled: isOpen,
+    retry: false,
+  });
+  const quoteError = (quote.error as { response?: { data?: { message?: string } } } | null)?.response?.data?.message;
 
   if (!isOpen) return null;
 
@@ -57,8 +77,8 @@ export const PricingSimulator = ({ config, isOpen, onClose }: PricingSimulatorPr
     setFileName(file.name);
     setIsCounting(true);
     try {
-      const pages = await countPdfPages(file);
-      setQuantity(pages);
+      const count = await countPdfPages(file);
+      setPages(String(count));
     } catch {
       setPdfError('Could not read that PDF — enter the page count manually');
     } finally {
@@ -113,15 +133,26 @@ export const PricingSimulator = ({ config, isOpen, onClose }: PricingSimulatorPr
             </div>
           </div>
 
-          {/* Quantity / pages */}
-          <FormRow label="Quantity / pages">
-            <input
-              id="simulator-quantity"
-              type="number" min="1" value={quantity}
-              onChange={(e) => setQuantity(Math.max(1, Number(e.target.value)))}
-              className="w-full px-3 py-2 bg-ios-gray6 rounded-ios text-sm text-ios-label focus:outline-none focus:ring-2 focus:ring-brand-hover"
-            />
-          </FormRow>
+          {/* Quantity, pages and size — the engine says which ones this service needs */}
+          <div className="grid grid-cols-2 gap-3">
+            <FormRow label="Copies">
+              <input
+                id="simulator-quantity"
+                type="number" min="1" value={quantity}
+                onChange={(e) => setQuantity(Math.max(1, Number(e.target.value)))}
+                className={inputCls}
+              />
+            </FormRow>
+            <FormRow label="Pages (document jobs)">
+              <input type="number" min="1" value={pages} placeholder="—" onChange={(e) => setPages(e.target.value)} className={inputCls} />
+            </FormRow>
+            <FormRow label="Width (sized jobs)">
+              <input type="number" min="0" step="0.1" value={width} placeholder="—" onChange={(e) => setWidth(e.target.value)} className={inputCls} />
+            </FormRow>
+            <FormRow label="Height (sized jobs)">
+              <input type="number" min="0" step="0.1" value={height} placeholder="—" onChange={(e) => setHeight(e.target.value)} className={inputCls} />
+            </FormRow>
+          </div>
 
           {/* Options */}
           {config.options.filter((o) => o.enabled).length > 0 && (
@@ -157,13 +188,27 @@ export const PricingSimulator = ({ config, isOpen, onClose }: PricingSimulatorPr
         </div>
 
         <div className="flex items-center justify-between px-6 py-4 border-t border-ios-gray5 bg-ios-gray6 sticky bottom-0">
-          <span className="text-sm text-ios-secondary-label">Estimated total</span>
-          <span className="text-2xl font-bold text-ios-label">GHS {total.toFixed(2)}</span>
+          <div>
+            <p className="text-sm text-ios-secondary-label">Customer pays</p>
+            <p className="text-xs text-ios-gray">Same engine as real orders</p>
+          </div>
+          {quote.isFetching && !quote.data ? (
+            <Loader2 className="w-5 h-5 text-brand-hover animate-spin" />
+          ) : quoteError || quote.isError ? (
+            <span className="text-sm text-ios-red text-right max-w-[60%]">{quoteError || "Couldn't price this sample"}</span>
+          ) : (
+            <span className={`text-2xl font-bold text-ios-label ${quote.isFetching ? 'opacity-50' : ''}`}>
+              GHS {(quote.data?.calculatedPrice ?? 0).toFixed(2)}
+            </span>
+          )}
         </div>
       </div>
     </div>
   );
 };
+
+const inputCls =
+  'w-full px-3 py-2 bg-ios-gray6 rounded-ios text-sm text-ios-label focus:outline-none focus:ring-2 focus:ring-brand-hover';
 
 const FormRow = ({ label, children }: { label: string; children: React.ReactNode }) => (
   <div>

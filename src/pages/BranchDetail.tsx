@@ -353,6 +353,7 @@ function BranchServices({ branchId }: { branchId: string }) {
       {configuring && (
         <PricingConfigEditor
           title={configuring.serviceTemplate?.name || configuring.serviceName || 'Service'}
+          source={{ agentServiceId: configuring.id }}
           subtitle="Branch pricing configuration"
           initialConfig={configuring.pricingConfig}
           fallbackPrice={configuring.pricePerUnit}
