@@ -129,6 +129,15 @@ export const Branches = () => {
                         <div className="flex items-start justify-between gap-2">
                           <h3 className="font-semibold text-ios-label truncate">{branch.name}</h3>
                           <Badge variant={isActive ? 'success' : 'neutral'}>{branch.status || 'Active'}</Badge>
+                          {branch.fulfilmentMode === 'self_managed' && (
+                            <Badge variant={branch.marketplaceListed && branch.acceptingOrders !== false ? 'success' : 'warning'}>
+                              {branch.marketplaceListed
+                                ? branch.acceptingOrders === false
+                                  ? 'Marketplace · paused'
+                                  : 'Marketplace'
+                                : 'Self-managed'}
+                            </Badge>
+                          )}
                         </div>
                         <p className="flex items-center gap-1 text-xs text-ios-secondary-label mt-1 truncate">
                           <MapPin className="w-3.5 h-3.5 shrink-0" />

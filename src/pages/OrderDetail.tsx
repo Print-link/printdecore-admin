@@ -22,6 +22,7 @@ type BadgeVariant = 'success' | 'neutral' | 'warning' | 'danger';
 const statusVariant: Record<OrderStatus, BadgeVariant> = {
   PENDING: 'warning',
   QUOTED: 'neutral',
+  AWAITING_PAYMENT: 'warning',
   PAID: 'success',
   CONFIRMING_AVAILABILITY: 'warning',
   RECEIVED: 'neutral',
@@ -36,7 +37,7 @@ const statusVariant: Record<OrderStatus, BadgeVariant> = {
 };
 
 const ALL_STATUSES: OrderStatus[] = [
-  'PENDING', 'QUOTED', 'PAID', 'CONFIRMING_AVAILABILITY', 'RECEIVED', 'IN_PROGRESS', 'PRINTING',
+  'PENDING', 'QUOTED', 'AWAITING_PAYMENT', 'PAID', 'CONFIRMING_AVAILABILITY', 'RECEIVED', 'IN_PROGRESS', 'PRINTING',
   'QUALITY_CHECK', 'READY_FOR_PICKUP', 'OUT_FOR_DELIVERY', 'DELIVERED',
   'COMPLETED', 'CANCELLED',
 ];
@@ -139,6 +140,7 @@ export const OrderDetail = () => {
               </h1>
               <Badge variant={statusVariant[order.status] || 'neutral'}>{order.status.replace(/_/g, ' ')}</Badge>
               {printRequest && <Badge variant="neutral">Print Assistance</Badge>}
+              {order.channel === 'marketplace' && <Badge variant="success">Marketplace · shop runs this order</Badge>}
             </div>
 
             <div className="bg-white rounded-ios shadow-ios p-4 grid grid-cols-2 md:grid-cols-3 gap-4">
@@ -151,6 +153,20 @@ export const OrderDetail = () => {
               <Field label="Created" value={formatDateTime(order.createdAt)} />
               <Field label="Updated" value={formatDateTime(order.updatedAt)} />
             </div>
+
+            {order.declineReason && (
+              <div className="bg-ios-red/5 border border-ios-red/20 rounded-ios p-4">
+                <p className="text-sm font-semibold text-ios-label">Declined by the shop</p>
+                <p className="text-sm text-ios-label mt-0.5">“{order.declineReason}”</p>
+                <p className={`text-xs mt-2 ${order.refundStatus === 'failed' ? 'text-ios-red font-semibold' : 'text-ios-secondary-label'}`}>
+                  {order.refundStatus === 'processed'
+                    ? 'Customer refunded.'
+                    : order.refundStatus === 'pending'
+                      ? 'Refund in progress with Paystack.'
+                      : 'Automatic refund failed — refund this customer from the Paystack dashboard.'}
+                </p>
+              </div>
+            )}
 
             {order.fulfilmentType && !printRequest && (
               <div className="bg-white rounded-ios shadow-ios p-4 space-y-3">

@@ -17,6 +17,7 @@ type BadgeVariant = 'success' | 'neutral' | 'warning' | 'danger';
 const statusVariant: Record<OrderStatus, BadgeVariant> = {
   PENDING: 'warning',
   QUOTED: 'neutral',
+  AWAITING_PAYMENT: 'warning',
   PAID: 'success',
   CONFIRMING_AVAILABILITY: 'warning',
   RECEIVED: 'neutral',
@@ -90,7 +91,10 @@ export const Orders = () => {
                       <td className="px-4 py-3 font-medium text-ios-label">{order.customerName || order.customerEmail || '-'}</td>
                       <td className="px-4 py-3 text-ios-secondary-label">{order.branchName || order.branchId}</td>
                       <td className="px-4 py-3">
-                        <Badge variant={statusVariant[order.status] || 'neutral'}>{order.status}</Badge>
+                        <div className="flex flex-wrap items-center gap-1">
+                          <Badge variant={statusVariant[order.status] || 'neutral'}>{order.status.replace(/_/g, ' ')}</Badge>
+                          {order.channel === 'marketplace' && <Badge variant="neutral">Marketplace</Badge>}
+                        </div>
                       </td>
                       <td className="px-4 py-3 text-right font-medium text-ios-label">{order.currency || 'GHS'} {order.totalPrice?.toFixed(2)}</td>
                       <td className="px-4 py-3 text-right text-ios-secondary-label">{order.commissionAmount != null ? `${order.currency || 'GHS'} ${order.commissionAmount.toFixed(2)}` : '-'}</td>

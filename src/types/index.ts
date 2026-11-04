@@ -115,6 +115,11 @@ export interface Branch {
   updatedAt?: string;
   payStackSubAccountId?: string;
   distance?: number;
+  /** managed: Printdecore runs its orders. self_managed: it runs its own in the vendor app. */
+  fulfilmentMode?: 'managed' | 'self_managed';
+  marketplaceListed?: boolean;
+  acceptingOrders?: boolean;
+  payoutsVerified?: boolean;
 }
 
 export interface Manager {
@@ -180,6 +185,7 @@ export interface Subscription {
 export type OrderStatus =
   | 'PENDING'
   | 'QUOTED'
+  | 'AWAITING_PAYMENT'
   | 'PAID'
   | 'CONFIRMING_AVAILABILITY'
   | 'RECEIVED'
@@ -221,6 +227,11 @@ export interface Order {
   deliveryLongitude?: number;
   recipientPhone?: string;
   estimatedCompletionTime?: string;
+  /** managed: came through Printdecore. marketplace: the customer chose this shop. */
+  channel?: 'managed' | 'marketplace';
+  /** Marketplace shop's reason for declining; the customer was refunded. */
+  declineReason?: string;
+  refundStatus?: 'pending' | 'processed' | 'failed';
   items?: OrderItem[];
   createdAt: string;
   updatedAt: string;

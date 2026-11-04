@@ -11,6 +11,7 @@ import {
   serviceTemplateService,
 } from '../services/superAdminService';
 import { LoadingSpinner } from '../components/LoadingSpinner';
+import { VendorModeCard } from '../components/branch/VendorModeCard';
 import { Layout } from '../components/Layout';
 import { Modal } from '../components/Modal';
 import { PricingConfigEditor } from '../components/PricingConfigEditor';
@@ -132,6 +133,8 @@ export const BranchDetail = () => {
                 </p>
               </div>
             )}
+
+            <VendorModeCard branchId={branchId} />
 
             <ListGroup title="Store Info">
               <ListRow leading={<Mail className="w-5 h-5 text-brand-hover" />} title="Email" trailing={<span className="text-sm text-ios-secondary-label">{branch.email || '-'}</span>} />
