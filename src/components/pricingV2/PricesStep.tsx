@@ -35,7 +35,36 @@ const textToBreaks = (s: string): QuantityBreak[] | null => {
   return out.sort((a, b) => a.min - b.min);
 };
 
-const emptyEntry = (): PriceEntry => ({ match: {}, unitPrice: 0, breaks: [], breakBasis: 'quantity', setupFee: 0, minimumCharge: 0 });
+/** What each price-row field does, shown next to its label */
+const PRICE_TIPS = {
+  bulk: (
+    <>
+      A lower price for bigger orders. Write <b>from:price</b> pairs separated by “;”. For example, <b>100:0.85; 250:0.70</b> charges
+      0.85 each from 100 and 0.70 each from 250. The highest step reached prices the <b>whole</b> order, so 250 can cost less than 249.
+      Leave empty to always use the main price.
+    </>
+  ),
+  breakBasis: (
+    <>
+      What the “from” numbers in <b>Cheaper in bulk</b> count: the number of items ordered, or the total measure across the order (for
+      example, 10 banners of 5 sq ft each count as 50 sq ft).
+    </>
+  ),
+  setup: (
+    <>
+      A one-off fee added <b>once per order</b>, however many copies. Use it for file prep, plates or machine setup. Leave 0 if
+      there isn’t one.
+    </>
+  ),
+  minimum: (
+    <>
+      The least an order can cost. If the order comes to less (after add-ons and setup), it’s raised to this amount before VAT.
+      For example, with a minimum of 10, a 1.80 job costs 10. Leave 0 for no minimum.
+    </>
+  ),
+};
+
+const emptyEntry = (): PriceEntry =>({ match: {}, unitPrice: 0, breaks: [], breakBasis: 'quantity', setupFee: 0, minimumCharge: 0 });
 
 export function PricesStep({
   productId,
@@ -173,24 +202,24 @@ export function PricesStep({
               )}
               <div className="flex flex-wrap items-end gap-2">
                 <div className="flex-1 min-w-[200px]">
-                  <Label hint="from:price, e.g. 100:0.85; 250:0.70">Cheaper in bulk</Label>
+                  <Label hint="from:price, e.g. 100:0.85; 250:0.70" tip={PRICE_TIPS.bulk} tipAlign="start">Cheaper in bulk</Label>
                   <input className={`${smallInputCls} w-full`} value={breakText[i] ?? ''} placeholder="No breaks"
                     onChange={(ev) => { setBreakText(breakText.map((t, j) => (j === i ? ev.target.value : t))); touch(); }} />
                 </div>
                 <div>
-                  <Label>Breaks count</Label>
+                  <Label tip={PRICE_TIPS.breakBasis}>Breaks count</Label>
                   <select className={smallInputCls} value={e.breakBasis} onChange={(ev) => setEntry(i, { ...e, breakBasis: ev.target.value as PriceEntry['breakBasis'] })}>
                     <option value="quantity">items</option>
                     <option value="measure">total {def.pricingUnit === 'item' ? 'items' : unit.per.replace('per ', '')}</option>
                   </select>
                 </div>
                 <div>
-                  <Label>Setup</Label>
+                  <Label tip={PRICE_TIPS.setup} tipAlign="end">Setup</Label>
                   <input type="number" min="0" step="0.01" className={`${smallInputCls} w-20`} value={e.setupFee}
                     onChange={(ev) => setEntry(i, { ...e, setupFee: parseNum(ev.target.value) ?? 0 })} />
                 </div>
                 <div>
-                  <Label>Minimum</Label>
+                  <Label tip={PRICE_TIPS.minimum} tipAlign="end">Minimum</Label>
                   <input type="number" min="0" step="0.01" className={`${smallInputCls} w-20`} value={e.minimumCharge}
                     onChange={(ev) => setEntry(i, { ...e, minimumCharge: parseNum(ev.target.value) ?? 0 })} />
                 </div>

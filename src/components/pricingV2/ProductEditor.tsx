@@ -204,6 +204,8 @@ export function ProductEditor({
                     def={def}
                     library={sizes}
                     pricingModel={product.pricingModel}
+                    livePrices={loaded?.livePrices ?? product.livePrices}
+                    pricedToday={loaded?.pricedToday ?? product.pricedToday}
                     draftVersionId={draftVersionId}
                     liveVersionId={liveVersionId}
                   />

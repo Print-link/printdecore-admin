@@ -1,5 +1,5 @@
-import type { ReactNode } from 'react';
-import { AlertTriangle } from 'lucide-react';
+import { useId, useState, type ReactNode } from 'react';
+import { AlertTriangle, HelpCircle } from 'lucide-react';
 import type { AttributeDef, PricingUnit } from '../../services/pricingV2Service';
 
 export const inputCls =
@@ -7,10 +7,42 @@ export const inputCls =
 export const smallInputCls =
   'px-2 py-1.5 bg-ios-gray6 rounded-lg text-sm text-ios-label placeholder:text-ios-gray focus:outline-none focus:ring-2 focus:ring-brand-hover';
 
-export const Label = ({ children, hint }: { children: ReactNode; hint?: ReactNode }) => (
-  <div className="mb-1">
+/** A ? icon that explains a field; opens on hover, tap or keyboard focus */
+export const InfoTip = ({ children, label = 'More info', align = 'center' }: { children: ReactNode; label?: string; align?: 'center' | 'start' | 'end' }) => {
+  const [open, setOpen] = useState(false);
+  const id = useId();
+  const position = { center: 'left-1/2 -translate-x-1/2', start: 'left-0', end: 'right-0' }[align];
+  return (
+    <span className="relative inline-flex align-middle">
+      <button
+        type="button"
+        aria-label={label}
+        aria-describedby={open ? id : undefined}
+        onMouseEnter={() => setOpen(true)}
+        onMouseLeave={() => setOpen(false)}
+        onFocus={() => setOpen(true)}
+        onBlur={() => setOpen(false)}
+        onClick={() => setOpen((v) => !v)}
+        onKeyDown={(e) => e.key === 'Escape' && setOpen(false)}
+        className="text-ios-gray hover:text-ios-secondary-label cursor-help rounded-full focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-hover"
+      >
+        <HelpCircle className="w-3.5 h-3.5" />
+      </button>
+      {open && (
+        <span id={id} role="tooltip"
+          className={`absolute z-50 bottom-full ${position} mb-2 w-64 p-2.5 rounded-lg shadow-lg border border-ios-gray5 bg-white text-xs font-normal leading-relaxed text-ios-label text-left whitespace-normal`}>
+          {children}
+        </span>
+      )}
+    </span>
+  );
+};
+
+export const Label = ({ children, hint, tip, tipAlign }: { children: ReactNode; hint?: ReactNode; tip?: ReactNode; tipAlign?: 'center' | 'start' | 'end' }) => (
+  <div className="mb-1 flex items-center gap-1">
     <span className="text-xs font-medium text-ios-secondary-label">{children}</span>
-    {hint && <span className="text-xs text-ios-gray ml-1.5">{hint}</span>}
+    {tip && <InfoTip label={`About ${typeof children === 'string' ? children.toLowerCase() : 'this field'}`} align={tipAlign}>{tip}</InfoTip>}
+    {hint && <span className="text-xs text-ios-gray ml-0.5">{hint}</span>}
   </div>
 );
 

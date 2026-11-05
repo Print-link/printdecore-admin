@@ -62,6 +62,10 @@ export interface ProductDefinition extends DefinitionInput {
   pricingModel: 'legacy' | 'v2';
   hasDefinition: boolean;
   ownerBranchId: string | null;
+  /** Printdecore's live prices for it */
+  livePrices: number;
+  /** It has a price on the old pricing, which switching must not drop */
+  pricedToday: boolean;
 }
 
 export interface EditorProduct {
@@ -77,6 +81,7 @@ export interface EditorProduct {
   livePrices: number;
   draftPrices: number;
   orderItems: number;
+  pricedToday: boolean;
 }
 
 export interface QuantityBreak { min: number; unitPrice: number }
@@ -157,6 +162,46 @@ export interface Margins {
   totals: { orders: number; revenue: number; margin: number; marginPct: number | null };
 }
 
+// ── Migration (phase 6) ──
+
+export type ProductStage = 'switched' | 'switched_shops_only' | 'ready_to_switch' | 'ready_shops_only' | 'needs_prices' | 'not_set_up';
+export type VendorStage = 'migrated' | 'ready' | 'needs_review' | 'prices_differ' | 'blocked' | 'waiting' | 'nothing_to_move';
+
+export interface OptionMatch {
+  vendorKey: string;
+  vendorName: string;
+  targetKey: string | null;
+  how: 'same_key' | 'same_name' | 'reviewed' | 'dropped' | 'unmatched';
+}
+
+export interface VendorPlan {
+  agentServiceId: string;
+  branchId: string;
+  branchName: string;
+  productId: string;
+  productName: string;
+  isActive: boolean;
+  stage: VendorStage;
+  problems: string[];
+  matches: OptionMatch[];
+  disabledOptionKeys: string[];
+  strategy: 'same' | 'own' | null;
+  checks: { checked: number; flagged: Array<{ label: string; before: number | null; after: number | null; note?: string }> };
+}
+
+export interface MigrationOverview {
+  products: Array<EditorProduct & { stage: ProductStage }>;
+  vendors: VendorPlan[];
+  review: Array<OptionMatch & { agentServiceId: string; branchName: string; productId: string; productName: string }>;
+}
+
+export interface MappingInput {
+  vendorOptionKey: string;
+  vendorOptionName?: string;
+  action: 'map' | 'drop';
+  targetOptionKey?: string | null;
+}
+
 type Ok<T> = { success: boolean; data: T };
 const base = '/pricing/v2';
 
@@ -172,7 +217,7 @@ export const pricingV2Service = {
   saveDefinition: async (id: string, d: DefinitionInput) => (await api.put<Ok<ProductDefinition>>(`${base}/products/${id}/definition`, d)).data.data,
   convert: async (id: string) => (await api.post<Ok<{ draft: VersionSummary; notes: string[] }>>(`${base}/products/${id}/convert`)).data.data,
   switchModel: async (id: string, to: 'v2' | 'legacy', force = false) =>
-    (await api.post<Ok<{ pricingModel: 'v2' | 'legacy'; report: RequoteSummary[] }>>(`${base}/products/${id}/switch`, { to, force })).data.data,
+    (await api.post<Ok<{ pricingModel: 'v2' | 'legacy'; report: RequoteSummary[]; shopsOnly: boolean }>>(`${base}/products/${id}/switch`, { to, force })).data.data,
   requote: async (id: string) => (await api.post<Ok<RequoteSummary | null>>(`${base}/products/${id}/requote`)).data.data,
   margins: async (id: string) => (await api.get<Ok<Margins>>(`${base}/products/${id}/margins`)).data.data,
 
@@ -201,4 +246,11 @@ export const pricingV2Service = {
 
   preview: async (productId: string, priceListVersionId: string | undefined, request: PreviewRequest) =>
     (await api.post<Ok<QuoteResult>>(`${base}/preview`, { productId, priceListVersionId, ...request })).data.data,
+
+  migration: async () => (await api.get<Ok<MigrationOverview>>(`${base}/migration`)).data.data,
+  vendorPlan: async (agentServiceId: string) => (await api.get<Ok<VendorPlan>>(`${base}/migration/vendors/${agentServiceId}`)).data.data,
+  saveMappings: async (agentServiceId: string, items: MappingInput[]) =>
+    (await api.put<Ok<VendorPlan>>(`${base}/migration/vendors/${agentServiceId}/mappings`, { items })).data.data,
+  migrateVendor: async (agentServiceId: string, force = false) =>
+    (await api.post<Ok<VendorPlan>>(`${base}/migration/vendors/${agentServiceId}/migrate`, { force })).data.data,
 };

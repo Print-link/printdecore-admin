@@ -68,6 +68,8 @@ export function CheckStep({
   def,
   library,
   pricingModel,
+  livePrices,
+  pricedToday,
   draftVersionId,
   liveVersionId,
 }: {
@@ -75,6 +77,8 @@ export function CheckStep({
   def: DefinitionInput;
   library: SizePreset[];
   pricingModel: 'legacy' | 'v2';
+  livePrices: number;
+  pricedToday: boolean;
   draftVersionId: string | null;
   liveVersionId: string | null;
 }) {
@@ -183,7 +187,13 @@ export function CheckStep({
         {customResult && <QuoteBreakdown result={customResult} />}
       </Section>
 
-      <GoLive productId={productId} pricingModel={pricingModel} liveVersionId={liveVersionId} onChanged={() => qc.invalidateQueries({ queryKey: ['pricingV2'] })} />
+      <GoLive
+        productId={productId}
+        pricingModel={pricingModel}
+        livePrices={livePrices}
+        pricedToday={pricedToday}
+        onChanged={() => qc.invalidateQueries({ queryKey: ['pricingV2'] })}
+      />
       {liveVersionId && <MarginsSection productId={productId} />}
     </div>
   );
@@ -243,7 +253,22 @@ function RequoteReport({ report }: { report: RequoteSummary[] }) {
   );
 }
 
-function GoLive({ productId, pricingModel, liveVersionId, onChanged }: { productId: string; pricingModel: 'legacy' | 'v2'; liveVersionId: string | null; onChanged: () => void }) {
+function GoLive({
+  productId,
+  pricingModel,
+  livePrices,
+  pricedToday,
+  onChanged,
+}: {
+  productId: string;
+  pricingModel: 'legacy' | 'v2';
+  livePrices: number;
+  pricedToday: boolean;
+  onChanged: () => void;
+}) {
+  const priced = livePrices > 0;
+  // No Printdecore price, and none today: it can still go live for shops at their own prices
+  const shopsOnly = !priced && !pricedToday;
   const [report, setReport] = useState<RequoteSummary[] | null>(null);
   const [blocked, setBlocked] = useState<{ message: string; problems: string[] } | null>(null);
   const [busy, setBusy] = useState(false);
@@ -266,7 +291,9 @@ function GoLive({ productId, pricingModel, liveVersionId, onChanged }: { product
     try {
       const res = await pricingV2Service.switchModel(productId, to, force);
       setReport(res.report);
-      toast.success(to === 'v2' ? 'Customers are now priced with the new setup' : 'Back on the old pricing');
+      toast.success(
+        to === 'legacy' ? 'Back on the old pricing' : res.shopsOnly ? 'Shops can now sell it at their own prices' : 'Customers are now priced with the new setup',
+      );
       onChanged();
     } catch (e) {
       // A 409 lists the orders that would be priced differently
@@ -281,22 +308,28 @@ function GoLive({ productId, pricingModel, liveVersionId, onChanged }: { product
       title="Go live"
       subtitle={
         pricingModel === 'v2'
-          ? 'Customers are priced with this setup and the live price list.'
-          : 'Customers are still priced the old way. Switch once the live prices match recent orders.'
+          ? priced
+            ? 'Customers are priced with this setup and the live price list.'
+            : 'Shops sell it at their own prices. Printdecore’s own orders need a price — publish one when it’s set.'
+          : shopsOnly
+            ? 'It has no price yet. Switch it so shops can sell it at their own prices; Printdecore’s price can follow later.'
+            : 'Customers are still priced the old way. Switch once the live prices match recent orders.'
       }
     >
       <div className="flex flex-wrap items-center gap-2">
         <Badge variant={pricingModel === 'v2' ? 'success' : 'neutral'}>{pricingModel === 'v2' ? 'New pricing' : 'Old pricing'}</Badge>
-        <Button variant="secondary" size="sm" disabled={busy || !liveVersionId} onClick={check}>Re-price recent orders</Button>
+        {priced && <Button variant="secondary" size="sm" disabled={busy} onClick={check}>Re-price recent orders</Button>}
         {pricingModel === 'legacy' ? (
-          <Button size="sm" disabled={busy || !liveVersionId} onClick={() => switchTo('v2')} title={!liveVersionId ? 'Publish prices first' : undefined}>
-            Switch to new pricing
+          <Button size="sm" disabled={busy || (!priced && !shopsOnly)} onClick={() => switchTo('v2')} title={!priced && !shopsOnly ? 'Publish prices first' : undefined}>
+            {shopsOnly ? 'Switch for shops' : 'Switch to new pricing'}
           </Button>
         ) : (
           <Button variant="secondary" size="sm" disabled={busy} onClick={() => switchTo('legacy')}>Switch back</Button>
         )}
       </div>
-      {!liveVersionId && <p className="text-xs text-ios-gray mt-1">Publish the draft before switching.</p>}
+      {pricingModel === 'legacy' && !priced && !shopsOnly && (
+        <p className="text-xs text-ios-gray mt-1">It has a price today — publish its prices before switching, so Printdecore’s own orders keep a price.</p>
+      )}
       {blocked && (
         <div className="mt-2 space-y-2">
           <Problems message={blocked.message} problems={blocked.problems} />
