@@ -1,7 +1,8 @@
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import toast from 'react-hot-toast';
-import { FolderOpen, Layers, MoreVertical, SlidersHorizontal } from 'lucide-react';
+import { FolderOpen, Layers, MoreVertical } from 'lucide-react';
+import { Link } from 'react-router-dom';
 import {
   categoryService,
   subCategoryService,
@@ -11,7 +12,6 @@ import {
 import { LoadingSpinner } from '../components/LoadingSpinner';
 import { Layout } from '../components/Layout';
 import { Modal } from '../components/Modal';
-import { PricingConfigEditor } from '../components/PricingConfigEditor';
 import { PageHeader } from '../components/ui/PageHeader';
 import { ListGroup, ListRow } from '../components/ui/ListGroup';
 import { Badge } from '../components/ui/Badge';
@@ -335,7 +335,6 @@ function TemplatesTab() {
   const [modalOpen, setModalOpen] = useState(false);
   const [editing, setEditing] = useState<ServiceTemplate | null>(null);
   const [openMenuId, setOpenMenuId] = useState<string | null>(null);
-  const [configuring, setConfiguring] = useState<ServiceTemplate | null>(null);
 
   const { data: subCategories = [] } = useQuery({ queryKey: ['sub-categories'], queryFn: () => subCategoryService.getAll() });
   const { data: formulas = [] } = useQuery({ queryKey: ['pricing-formulas'], queryFn: pricingFormulaService.getAll });
@@ -366,11 +365,6 @@ function TemplatesTab() {
     onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['service-templates'] }); },
     onError: (e: any) => toast.error(e.response?.data?.message || 'Failed to update service'),
   });
-  const savePricingMutation = useMutation({
-    mutationFn: ({ id, data }: { id: string; data: Partial<ServiceTemplate> }) => serviceTemplateService.update(id, data),
-    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['service-templates'] }); toast.success('Pricing saved'); setConfiguring(null); },
-    onError: (e: any) => toast.error(e.response?.data?.message || 'Failed to save pricing'),
-  });
 
   const openCreate = () => { setEditing(null); setModalOpen(true); };
   const openEdit = (t: ServiceTemplate) => { setEditing(t); setModalOpen(true); };
@@ -383,9 +377,6 @@ function TemplatesTab() {
       name: String(form.get('name')),
       measurementUnit: form.get('measurementUnit') as ServiceTemplate['measurementUnit'],
       pricingFormulaId: String(form.get('pricingFormulaId')),
-      pricePerUnit: form.get('pricePerUnit') ? Number(form.get('pricePerUnit')) : undefined,
-      constant: form.get('constant') ? Number(form.get('constant')) : undefined,
-      colorPriceModifier: form.get('colorPriceModifier') ? Number(form.get('colorPriceModifier')) : undefined,
       supportsFrontBack: form.get('supportsFrontBack') === 'on',
       supportsColor: form.get('supportsColor') === 'on',
       supportsPrintCut: form.get('supportsPrintCut') === 'on',
@@ -417,19 +408,10 @@ function TemplatesTab() {
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-1.5">
                   <p className="text-sm font-medium text-ios-label truncate">{t.name}</p>
-                  {!!t.pricingConfig?.baseConfigurations?.length && <Badge variant="warning">Flexible</Badge>}
                 </div>
                 <p className="text-xs text-ios-secondary-label truncate mt-0.5">{subCategoryName(t.subCategoryId)}</p>
               </div>
-              <div className="shrink-0 text-sm text-ios-label">
-                {t.pricingConfig?.baseConfigurations?.length ? (
-                  `From GHS ${Math.min(...t.pricingConfig.baseConfigurations.map((bc) => bc.unitPrice)).toFixed(2)}`
-                ) : t.pricePerUnit != null ? (
-                  `GHS ${t.pricePerUnit.toFixed(2)}`
-                ) : (
-                  <span className="text-ios-orange text-xs">Not set</span>
-                )}
-              </div>
+              <Link to="/pricing" className="shrink-0 text-xs text-brand-hover hover:underline">Prices in Product pricing</Link>
               <Switch checked={t.isActive} onChange={() => toggleActiveMutation.mutate({ id: t.id, isActive: !t.isActive })} />
               <div className="relative shrink-0">
                 <button
@@ -442,12 +424,6 @@ function TemplatesTab() {
                 </button>
                 {openMenuId === t.id && (
                   <div className="absolute right-0 mt-1 w-40 bg-white rounded-ios shadow-ios border border-ios-gray5 py-1 z-10">
-                    <button
-                      onClick={() => { setConfiguring(t); setOpenMenuId(null); }}
-                      className="w-full flex items-center gap-2 text-left px-3 py-1.5 text-sm text-ios-label hover:bg-ios-gray6"
-                    >
-                      <SlidersHorizontal className="w-3.5 h-3.5" /> Configure Pricing
-                    </button>
                     <button onClick={() => { openEdit(t); setOpenMenuId(null); }} className="w-full text-left px-3 py-1.5 text-sm text-ios-label hover:bg-ios-gray6">Edit</button>
                     <button
                       onClick={() => { if (confirm(`Delete "${t.name}"?`)) deleteMutation.mutate(t.id); setOpenMenuId(null); }}
@@ -536,21 +512,6 @@ function TemplatesTab() {
         </form>
       </Modal>
 
-      {configuring && (
-        <PricingConfigEditor
-          title={configuring.name}
-          source={{ serviceTemplateId: configuring.id }}
-          initialConfig={configuring.pricingConfig}
-          fallbackPrice={configuring.pricePerUnit}
-          isOpen
-          isSaving={savePricingMutation.isPending}
-          onClose={() => setConfiguring(null)}
-          onSave={(config, activate) => savePricingMutation.mutate({
-            id: configuring.id,
-            data: { pricingConfig: config, ...(activate ? { isActive: true } : {}) },
-          })}
-        />
-      )}
     </div>
   );
 }
