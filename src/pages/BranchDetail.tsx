@@ -2,26 +2,23 @@ import { useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import toast from 'react-hot-toast';
-import { ArrowLeft, Building2, Mail, Phone, MapPin, Layers, MoreVertical, Link2, Search, ChevronRight, Star, Crown, Percent, Clock, Pencil } from 'lucide-react';
+import { ArrowLeft, Building2, Mail, Phone, MapPin, Layers, MoreVertical, Star, Crown, Percent, Clock, Pencil } from 'lucide-react';
 import {
   branchService,
   agentServiceService,
   categoryService,
   subCategoryService,
-  serviceTemplateService,
 } from '../services/superAdminService';
 import { LoadingSpinner } from '../components/LoadingSpinner';
+import { VendorModeCard } from '../components/branch/VendorModeCard';
 import { Layout } from '../components/Layout';
 import { Modal } from '../components/Modal';
-import { PricingConfigEditor } from '../components/PricingConfigEditor';
-import { PageHeader } from '../components/ui/PageHeader';
 import { ListGroup, ListRow } from '../components/ui/ListGroup';
-import { Badge } from '../components/ui/Badge';
 import { Button } from '../components/ui/Button';
 import { Switch } from '../components/ui/Switch';
 import { FormField, iosInputCls } from '../components/ui/FormField';
 import { getStoreOpenStatus, orderedDays, currentDayKey, formatHourRange, WEEKDAY_LABELS } from '../utils/storeHours';
-import type { AgentService, ServiceCategory } from '../types';
+import type { ServiceCategory } from '../types';
 
 const TIER_LABEL: Record<string, string> = {
   '2x': '🔥 2x Performer',
@@ -133,6 +130,8 @@ export const BranchDetail = () => {
               </div>
             )}
 
+            <VendorModeCard branchId={branchId} />
+
             <ListGroup title="Store Info">
               <ListRow leading={<Mail className="w-5 h-5 text-brand-hover" />} title="Email" trailing={<span className="text-sm text-ios-secondary-label">{branch.email || '-'}</span>} />
               <ListRow leading={<Phone className="w-5 h-5 text-brand-hover" />} title="Phone" trailing={<span className="text-sm text-ios-secondary-label">{branch.phoneNumber || '-'}</span>} />
@@ -168,9 +167,6 @@ export const BranchDetail = () => {
 
 function BranchServices({ branchId }: { branchId: string }) {
   const queryClient = useQueryClient();
-  const [linkModalOpen, setLinkModalOpen] = useState(false);
-  const [editing, setEditing] = useState<AgentService | null>(null);
-  const [configuring, setConfiguring] = useState<AgentService | null>(null);
   const [openMenuId, setOpenMenuId] = useState<string | null>(null);
   const [categoryModalOpen, setCategoryModalOpen] = useState(false);
   const [subCategoryModalOpen, setSubCategoryModalOpen] = useState(false);
@@ -182,11 +178,6 @@ function BranchServices({ branchId }: { branchId: string }) {
     queryFn: () => agentServiceService.getAll({ branchId }),
   });
 
-  const updateMutation = useMutation({
-    mutationFn: ({ id, data }: { id: string; data: Partial<AgentService> }) => agentServiceService.update(id, data),
-    onSuccess: () => { invalidateServices(); toast.success('Service updated'); setEditing(null); },
-    onError: (e: any) => toast.error(e.response?.data?.message || 'Failed to update service'),
-  });
   const toggleActiveMutation = useMutation({
     mutationFn: ({ id, isActive }: { id: string; isActive: boolean }) => agentServiceService.update(id, { isActive }),
     onSuccess: invalidateServices,
@@ -202,40 +193,17 @@ function BranchServices({ branchId }: { branchId: string }) {
     onSuccess: () => { invalidateServices(); toast.success('Service unlinked from branch'); },
     onError: (e: any) => toast.error(e.response?.data?.message || 'Failed to unlink service'),
   });
-  const savePricingMutation = useMutation({
-    mutationFn: ({ id, data }: { id: string; data: Partial<AgentService> }) => agentServiceService.update(id, data),
-    onSuccess: () => { invalidateServices(); toast.success('Pricing saved'); setConfiguring(null); },
-    onError: (e: any) => toast.error(e.response?.data?.message || 'Failed to save pricing'),
-  });
-
-  const handleEditSubmit = (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
-    if (!editing) return;
-    const form = new FormData(e.currentTarget);
-    updateMutation.mutate({
-      id: editing.id,
-      data: {
-        pricePerUnit: form.get('pricePerUnit') ? Number(form.get('pricePerUnit')) : undefined,
-        constant: form.get('constant') ? Number(form.get('constant')) : undefined,
-        colorPriceModifier: form.get('colorPriceModifier') ? Number(form.get('colorPriceModifier')) : undefined,
-        supportsPrintCut: form.get('supportsPrintCut') === 'on',
-        supportsColor: form.get('supportsColor') === 'on',
-        supportsFrontBack: form.get('supportsFrontBack') === 'on',
-        supportsFrontOnly: form.get('supportsFrontOnly') === 'on',
-      },
-    });
-  };
 
   return (
     <div>
       <div className="flex items-center justify-between mb-1 px-3.5">
-        <p className="text-xs font-semibold text-ios-secondary-label uppercase tracking-wide">Configured Services</p>
+        <div>
+          <p className="text-xs font-semibold text-ios-secondary-label uppercase tracking-wide">Products</p>
+          <p className="text-xs text-ios-gray mt-0.5">The vendor adds products and sets prices in their app, under Products and prices.</p>
+        </div>
         <div className="flex gap-2">
           <Button size="sm" variant="secondary" onClick={() => setCategoryModalOpen(true)}>+ Category</Button>
           <Button size="sm" variant="secondary" onClick={() => setSubCategoryModalOpen(true)}>+ Sub-Category</Button>
-          <Button size="sm" onClick={() => setLinkModalOpen(true)}>
-            <Link2 className="w-3.5 h-3.5" /> Link Service
-          </Button>
         </div>
       </div>
 
@@ -246,8 +214,7 @@ function BranchServices({ branchId }: { branchId: string }) {
           {services.map((s) => (
             <div
               key={s.id}
-              onClick={() => setConfiguring(s)}
-              className="flex items-center gap-3 px-3.5 py-2.5 cursor-pointer hover:bg-ios-gray6"
+              className="flex items-center gap-3 px-3.5 py-2.5"
             >
               <div className="w-9 h-9 rounded-xl bg-brand/15 flex items-center justify-center shrink-0">
                 <Layers className="w-4 h-4 text-brand-hover" />
@@ -255,20 +222,13 @@ function BranchServices({ branchId }: { branchId: string }) {
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-1.5">
                   <p className="text-sm font-medium text-ios-label truncate">{s.serviceTemplate?.name || s.serviceName || '-'}</p>
-                  {!!s.pricingConfig?.baseConfigurations?.length && <Badge variant="warning">Flexible</Badge>}
                 </div>
                 <p className="text-xs text-ios-secondary-label truncate mt-0.5">
                   {s.category?.name || '-'} {s.subCategory?.name ? `› ${s.subCategory.name}` : ''}
                 </p>
               </div>
-              <div className="shrink-0 text-sm text-ios-label">
-                {s.pricingConfig?.baseConfigurations?.length ? (
-                  `From GHS ${Math.min(...s.pricingConfig.baseConfigurations.map((bc) => bc.unitPrice)).toFixed(2)}`
-                ) : s.pricePerUnit != null ? (
-                  `GHS ${Number(s.pricePerUnit).toFixed(2)}`
-                ) : (
-                  <span className="text-ios-orange text-xs">Not set</span>
-                )}
+              <div className="shrink-0 text-xs text-ios-secondary-label">
+                {s.isActive ? 'On sale' : 'Not on sale'}
               </div>
               <div onClick={(e) => e.stopPropagation()} className="shrink-0">
                 <Switch checked={s.isActive} onChange={() => toggleActiveMutation.mutate({ id: s.id, isActive: !s.isActive })} />
@@ -292,7 +252,6 @@ function BranchServices({ branchId }: { branchId: string }) {
                 </button>
                 {openMenuId === s.id && (
                   <div className="absolute right-0 mt-1 w-32 bg-white rounded-ios shadow-ios border border-ios-gray5 py-1 z-10">
-                    <button onClick={() => { setEditing(s); setOpenMenuId(null); }} className="w-full text-left px-3 py-1.5 text-sm text-ios-label hover:bg-ios-gray6">Edit rate</button>
                     <button
                       onClick={() => { if (confirm(`Unlink "${s.serviceTemplate?.name || s.serviceName}" from this branch?`)) deleteMutation.mutate(s.id); setOpenMenuId(null); }}
                       className="w-full text-left px-3 py-1.5 text-sm text-ios-red hover:bg-ios-red/10"
@@ -302,7 +261,6 @@ function BranchServices({ branchId }: { branchId: string }) {
                   </div>
                 )}
               </div>
-              <ChevronRight className="w-4 h-4 text-ios-gray3 shrink-0" />
             </div>
           ))}
           {services.length === 0 && (
@@ -311,194 +269,11 @@ function BranchServices({ branchId }: { branchId: string }) {
         </div>
       )}
 
-      {/* Edit service modal */}
-      <Modal isOpen={!!editing} onClose={() => setEditing(null)} title="Edit Rate & Capabilities">
-        {editing && (
-          <form onSubmit={handleEditSubmit} className="space-y-4">
-            <div className="grid grid-cols-3 gap-4">
-              <FormField label="Price per unit (GHS)">
-                <input name="pricePerUnit" type="number" min="0" step="0.01" defaultValue={editing.pricePerUnit} className={iosInputCls} />
-              </FormField>
-              <FormField label="Constant">
-                <input name="constant" type="number" min="0" step="0.01" defaultValue={editing.constant} className={iosInputCls} />
-              </FormField>
-              <FormField label="Color modifier">
-                <input name="colorPriceModifier" type="number" min="0" step="0.01" defaultValue={editing.colorPriceModifier} className={iosInputCls} />
-              </FormField>
-            </div>
-            <div className="flex flex-wrap gap-4">
-              <label className="flex items-center gap-2 text-sm text-ios-label">
-                <input type="checkbox" name="supportsFrontBack" defaultChecked={editing.supportsFrontBack} /> Front &amp; back
-              </label>
-              <label className="flex items-center gap-2 text-sm text-ios-label">
-                <input type="checkbox" name="supportsFrontOnly" defaultChecked={editing.supportsFrontOnly} /> Front only
-              </label>
-              <label className="flex items-center gap-2 text-sm text-ios-label">
-                <input type="checkbox" name="supportsColor" defaultChecked={editing.supportsColor} /> Color
-              </label>
-              <label className="flex items-center gap-2 text-sm text-ios-label">
-                <input type="checkbox" name="supportsPrintCut" defaultChecked={editing.supportsPrintCut} /> Print &amp; cut
-              </label>
-            </div>
-            <Button type="submit" disabled={updateMutation.isPending} className="w-full py-2.5">
-              {updateMutation.isPending ? 'Saving…' : 'Save changes'}
-            </Button>
-          </form>
-        )}
-      </Modal>
 
-      {configuring && (
-        <PricingConfigEditor
-          title={configuring.serviceTemplate?.name || configuring.serviceName || 'Service'}
-          subtitle="Branch pricing configuration"
-          initialConfig={configuring.pricingConfig}
-          fallbackPrice={configuring.pricePerUnit}
-          isOpen
-          isSaving={savePricingMutation.isPending}
-          onClose={() => setConfiguring(null)}
-          onSave={(config, activate) => savePricingMutation.mutate({
-            id: configuring.id,
-            data: { pricingConfig: config, ...(activate ? { isActive: true } : {}) },
-          })}
-        />
-      )}
 
-      <LinkServiceModal
-        branchId={branchId}
-        isOpen={linkModalOpen}
-        onClose={() => setLinkModalOpen(false)}
-        existingServiceTemplateIds={services.map((s) => s.serviceTemplateId)}
-      />
       <CreateBranchCategoryModal branchId={branchId} isOpen={categoryModalOpen} onClose={() => setCategoryModalOpen(false)} />
       <CreateBranchSubCategoryModal branchId={branchId} isOpen={subCategoryModalOpen} onClose={() => setSubCategoryModalOpen(false)} />
     </div>
-  );
-}
-
-// ─── Link an already-configured service template (from the Services catalogue) to this branch ─
-
-function LinkServiceModal({
-  branchId,
-  isOpen,
-  onClose,
-  existingServiceTemplateIds,
-}: {
-  branchId: string;
-  isOpen: boolean;
-  onClose: () => void;
-  existingServiceTemplateIds: string[];
-}) {
-  const queryClient = useQueryClient();
-  const [search, setSearch] = useState('');
-  const [linkingId, setLinkingId] = useState<string | null>(null);
-
-  const { data: categories = [] } = useQuery({
-    queryKey: ['categories', branchId],
-    queryFn: () => categoryService.getAll(branchId),
-    enabled: isOpen,
-  });
-  const { data: subCategories = [] } = useQuery({
-    queryKey: ['sub-categories', branchId],
-    queryFn: () => subCategoryService.getAll(undefined, branchId),
-    enabled: isOpen,
-  });
-  const { data: templates = [], isLoading } = useQuery({
-    queryKey: ['service-templates', branchId],
-    queryFn: () => serviceTemplateService.getAll(undefined, branchId),
-    enabled: isOpen,
-  });
-
-  const subCategoryName = (id: string) => subCategories.find((s) => s.id === id)?.name;
-  const categoryName = (subCategoryId: string) => {
-    const sub = subCategories.find((s) => s.id === subCategoryId);
-    return sub ? categories.find((c) => c.id === sub.categoryId)?.name : undefined;
-  };
-
-  const eligibleTemplates = templates
-    .filter((t) => !existingServiceTemplateIds.includes(t.id))
-    .filter((t) => t.name.toLowerCase().includes(search.toLowerCase()));
-
-  const createMutation = useMutation({
-    mutationFn: agentServiceService.create,
-    onMutate: (data) => setLinkingId(data.serviceTemplateId),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['agent-services', branchId] });
-      toast.success('Service linked to branch');
-      handleClose();
-    },
-    onError: (e: any) => { toast.error(e.response?.data?.message || 'Failed to link service'); setLinkingId(null); },
-  });
-
-  const handleClose = () => {
-    setSearch('');
-    onClose();
-  };
-
-  return (
-    <Modal isOpen={isOpen} onClose={handleClose} title="Link Service to Branch" size="large">
-      <div className="space-y-3">
-        <p className="text-xs text-ios-secondary-label">
-          Pick from services already configured in the catalogue — pricing carries over automatically.
-        </p>
-        <div className="relative">
-          <Search className="w-4 h-4 text-ios-gray absolute left-3 top-1/2 -translate-y-1/2" />
-          <input
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            placeholder="Search services…"
-            className={`${iosInputCls} pl-9`}
-          />
-        </div>
-
-        {isLoading ? (
-          <div className="flex justify-center py-10"><LoadingSpinner /></div>
-        ) : (
-          <div className="bg-white rounded-ios border border-ios-gray5 divide-y divide-ios-gray5 max-h-96 overflow-y-auto">
-            {eligibleTemplates.map((t) => (
-              <button
-                key={t.id}
-                type="button"
-                disabled={createMutation.isPending}
-                onClick={() => createMutation.mutate({ branchId, serviceTemplateId: t.id })}
-                className="w-full flex items-center gap-3 px-3.5 py-2.5 text-left hover:bg-ios-gray6 disabled:opacity-50"
-              >
-                <div className="w-9 h-9 rounded-xl bg-brand/15 flex items-center justify-center shrink-0">
-                  <Layers className="w-4 h-4 text-brand-hover" />
-                </div>
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium text-ios-label truncate">{t.name}</p>
-                  <p className="text-xs text-ios-secondary-label truncate mt-0.5">
-                    {categoryName(t.subCategoryId) || '-'} {subCategoryName(t.subCategoryId) ? `› ${subCategoryName(t.subCategoryId)}` : ''}
-                  </p>
-                </div>
-                <div className="shrink-0 flex items-center gap-2">
-                  {t.pricingConfig?.baseConfigurations?.length ? (
-                    <>
-                      <Badge variant="warning">Flexible</Badge>
-                      <span className="text-sm text-ios-label">From GHS {Math.min(...t.pricingConfig.baseConfigurations.map((bc) => bc.unitPrice)).toFixed(2)}</span>
-                    </>
-                  ) : t.pricePerUnit != null ? (
-                    <span className="text-sm text-ios-label">GHS {t.pricePerUnit.toFixed(2)}</span>
-                  ) : (
-                    <span className="text-xs text-ios-orange">Not set</span>
-                  )}
-                  {linkingId === t.id && createMutation.isPending ? (
-                    <LoadingSpinner size="sm" />
-                  ) : (
-                    <Link2 className="w-4 h-4 text-ios-gray" />
-                  )}
-                </div>
-              </button>
-            ))}
-            {eligibleTemplates.length === 0 && (
-              <div className="px-4 py-8 text-center text-ios-gray text-sm">
-                {templates.length === 0 ? 'No services in the catalogue yet — add one in Services first.' : 'No unlinked services match your search.'}
-              </div>
-            )}
-          </div>
-        )}
-      </div>
-    </Modal>
   );
 }
 

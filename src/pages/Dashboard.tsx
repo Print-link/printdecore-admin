@@ -14,7 +14,7 @@ import type { OrderStatus } from '../types';
 type BadgeVariant = 'success' | 'neutral' | 'warning' | 'danger';
 
 const statusVariant: Record<OrderStatus, BadgeVariant> = {
-  PENDING: 'warning', QUOTED: 'neutral', PAID: 'success', CONFIRMING_AVAILABILITY: 'warning', RECEIVED: 'neutral',
+  PENDING: 'warning', QUOTED: 'neutral', AWAITING_PAYMENT: 'warning', PAID: 'success', CONFIRMING_AVAILABILITY: 'warning', RECEIVED: 'neutral',
   IN_PROGRESS: 'warning', PRINTING: 'warning', QUALITY_CHECK: 'neutral',
   READY_FOR_PICKUP: 'neutral', OUT_FOR_DELIVERY: 'neutral', DELIVERED: 'success',
   COMPLETED: 'success', CANCELLED: 'danger',

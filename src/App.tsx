@@ -17,6 +17,8 @@ import { Orders } from "./pages/Orders";
 import { OrderDetail } from "./pages/OrderDetail";
 import { QuotationQueue } from "./pages/QuotationQueue";
 import { Services } from "./pages/Services";
+import { ProductPricing } from "./pages/ProductPricing";
+import { PricingMigration } from "./pages/PricingMigration";
 import { Billing } from "./pages/Billing";
 import { Reports } from "./pages/Reports";
 import { WhatsApp } from "./pages/WhatsApp";
@@ -50,6 +52,8 @@ const protectedRoutes = [
   { path: "/orders/:id", element: <OrderDetail /> },
   { path: "/quotations", element: <QuotationQueue /> },
   { path: "/services", element: <Services /> },
+  { path: "/pricing", element: <ProductPricing /> },
+  { path: "/pricing/migration", element: <PricingMigration /> },
   { path: "/billing", element: <Billing /> },
   { path: "/reports", element: <Reports /> },
   { path: "/whatsapp", element: <WhatsApp /> },
