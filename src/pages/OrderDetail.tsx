@@ -201,7 +201,8 @@ export const OrderDetail = () => {
                 {(() => {
                   const next = showAllStatuses ? ALL_STATUSES : nextStatusesFor(order.status, order.fulfilmentType);
                   const options = [order.status, ...next.filter((s) => s !== order.status)];
-                  const needsReadyBy = statusDraft === 'RECEIVED';
+                  // Accepting a paid order starts production; the customer gets the ready-by time
+                  const needsReadyBy = statusDraft === 'RECEIVED' || (order.status === 'PAID' && statusDraft === 'IN_PROGRESS');
                   const blocked = !statusDraft || statusDraft === order.status || (needsReadyBy && !readyByDraft);
                   return (
                     <div className="space-y-2">
