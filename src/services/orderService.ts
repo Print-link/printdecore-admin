@@ -64,6 +64,10 @@ export interface Quotation {
   serviceName?: string;
   /** The catalog's instant estimate, if the service has one — a starting point, never charged directly. */
   referencePrice?: number;
+  /** The price ops/the shop named; amount (what the customer pays) has commission on top */
+  shopPrice?: number;
+  /** The branch the order is at — its commission rate applies */
+  branchId?: string;
 }
 
 export const quotationService = {

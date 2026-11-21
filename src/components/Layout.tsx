@@ -11,6 +11,7 @@ import {
   FileText,
   Layers,
   CreditCard,
+  HandCoins,
   BarChart3,
   MessageCircle,
   History,
@@ -96,6 +97,7 @@ const groups: NavGroup[] = [
     label: 'Administration',
     icon: ShieldCheck,
     items: [
+      { name: 'Service fee', path: '/commission', icon: HandCoins },
       { name: 'Billing & Plans', path: '/billing', icon: CreditCard },
       { name: 'Reports', path: '/reports', icon: BarChart3 },
       { name: 'Activity Logs', path: '/activity-logs', icon: History },

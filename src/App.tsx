@@ -20,6 +20,7 @@ import { Services } from "./pages/Services";
 import { ProductPricing } from "./pages/ProductPricing";
 import { PricingMigration } from "./pages/PricingMigration";
 import { Billing } from "./pages/Billing";
+import { Commission } from "./pages/Commission";
 import { Reports } from "./pages/Reports";
 import { WhatsApp } from "./pages/WhatsApp";
 import { ActivityLogs } from "./pages/ActivityLogs";
@@ -55,6 +56,7 @@ const protectedRoutes = [
   { path: "/pricing", element: <ProductPricing /> },
   { path: "/pricing/migration", element: <PricingMigration /> },
   { path: "/billing", element: <Billing /> },
+  { path: "/commission", element: <Commission /> },
   { path: "/reports", element: <Reports /> },
   { path: "/whatsapp", element: <WhatsApp /> },
   { path: "/activity-logs", element: <ActivityLogs /> },

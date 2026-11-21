@@ -1,7 +1,8 @@
-import { useEffect, useState } from 'react';
-import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { useState } from 'react';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import toast from 'react-hot-toast';
 import { quotationService, type Quotation } from '../../services/orderService';
+import { commissionService, withCommission } from '../../services/commissionService';
 import { Badge } from '../ui/Badge';
 import { Button } from '../ui/Button';
 import { FormField, iosInputCls } from '../ui/FormField';
@@ -33,14 +34,23 @@ interface QuoteComposerProps {
  */
 export const QuoteComposer = ({ quotation, orderStatus, referencePrice, onSent }: QuoteComposerProps) => {
   const queryClient = useQueryClient();
-  const initial = quotation.amount ?? referencePrice;
+  // What's typed is the shop's price; the customer pays it plus commission
+  const initial = quotation.shopPrice ?? referencePrice;
   const [amount, setAmount] = useState(initial != null ? String(initial) : '');
 
-  // Re-seed when the row we're editing changes (queue modal reused across rows).
-  useEffect(() => {
-    const next = quotation.amount ?? referencePrice;
-    setAmount(next != null ? String(next) : '');
-  }, [quotation.id, quotation.amount, referencePrice]);
+  // Re-seed when the row we're editing changes (queue modal reused across rows)
+  const seedKey = `${quotation.id}:${initial ?? ''}`;
+  const [seeded, setSeeded] = useState(seedKey);
+  if (seeded !== seedKey) {
+    setSeeded(seedKey);
+    setAmount(initial != null ? String(initial) : '');
+  }
+
+  const { data: rate } = useQuery({
+    queryKey: ['commissionRate', quotation.branchId ?? 'global'],
+    queryFn: () => commissionService.getRate(quotation.branchId),
+    staleTime: 60_000,
+  });
 
   const sendMutation = useMutation({
     mutationFn: ({ id, value }: { id: string; value: number }) => quotationService.send(id, value),
@@ -48,17 +58,19 @@ export const QuoteComposer = ({ quotation, orderStatus, referencePrice, onSent }
       queryClient.invalidateQueries({ queryKey: ['quotations'] });
       queryClient.invalidateQueries({ queryKey: ['order', quotation.orderId] });
       queryClient.invalidateQueries({ queryKey: ['orders'] });
-      toast.success(`Quote sent — ${money(sent.amount ?? 0)}. The customer has been emailed.`);
+      toast.success(`Quote sent — the customer pays ${money(sent.amount ?? 0)}. They've been emailed.`);
       onSent?.(sent);
     },
-    onError: (e: any) => toast.error(e.response?.data?.message || 'Failed to send quote'),
+    onError: (e: unknown) =>
+      toast.error((e as { response?: { data?: { message?: string } } }).response?.data?.message || 'Failed to send quote'),
   });
 
   const parsed = Number(amount);
   const valid = amount !== '' && Number.isFinite(parsed) && parsed > 0;
   const locked = !!orderStatus && LOCKED.includes(orderStatus);
   const isResend = quotation.status !== 'PENDING';
-  const unchanged = isResend && quotation.amount != null && Math.abs(parsed - quotation.amount) < 0.005;
+  const unchanged = isResend && quotation.shopPrice != null && Math.abs(parsed - quotation.shopPrice) < 0.005;
+  const preview = valid && rate !== undefined ? withCommission(parsed, rate) : undefined;
 
   const submit = () => {
     if (!valid || locked) return;
@@ -78,7 +90,7 @@ export const QuoteComposer = ({ quotation, orderStatus, referencePrice, onSent }
         </p>
       ) : (
         <>
-          <FormField label="Amount the customer pays (GHS)">
+          <FormField label="Price for the job (GHS) — before the platform service fee">
             <div className="flex gap-2">
               <input
                 type="number"
@@ -103,6 +115,19 @@ export const QuoteComposer = ({ quotation, orderStatus, referencePrice, onSent }
               </Button>
             </div>
           </FormField>
+
+          {preview && (
+            <div className="rounded-ios bg-white border border-ios-gray5 px-3 py-2 text-sm space-y-0.5">
+              <div className="flex justify-between text-ios-secondary-label">
+                <span>Platform service fee ({rate}%)</span>
+                <span className="tabular-nums">+ {money(preview.commission)}</span>
+              </div>
+              <div className="flex justify-between font-semibold text-ios-label">
+                <span>Customer pays</span>
+                <span className="tabular-nums">{money(preview.customerPrice)}</span>
+              </div>
+            </div>
+          )}
 
           {referencePrice != null && (
             <p className="text-xs text-ios-gray">
