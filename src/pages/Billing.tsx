@@ -11,6 +11,7 @@ import { Button } from '../components/ui/Button';
 import { FormField, iosInputCls } from '../components/ui/FormField';
 import toast from 'react-hot-toast';
 import type { Plan } from '../types';
+import { Can } from '../components/Can';
 
 export const Billing = () => {
   const [editingPlan, setEditingPlan] = useState<Plan | null>(null);
@@ -85,9 +86,11 @@ export const Billing = () => {
                   </div>
                 </div>
 
+                <Can permission="finance.manage">
                 <Button variant="secondary" size="sm" onClick={() => setEditingPlan(plan)} className="mt-4 w-full py-2">
                   Edit Plan
                 </Button>
+                </Can>
               </Card>
             ))}
           </div>

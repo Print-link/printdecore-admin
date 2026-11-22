@@ -34,14 +34,16 @@ const chime = () => {
  * Polls even in a background tab, and when a new one arrives shows a toast,
  * plays a chime and puts the count in the tab title — the customer is
  * watching a 10-minute countdown, so ops shouldn't have to keep refreshing.
- * Returns the count for the sidebar badge.
+ * Returns the count for the sidebar badge. Off (0) when `enabled` is false.
  */
-export const useNewOrderAlerts = (): number => {
+export const useNewOrderAlerts = (enabled = true): number => {
   const { data: pending } = useQuery({
     queryKey: ['quotations', 'PENDING'],
     queryFn: () => quotationService.getAll('PENDING'),
     refetchInterval: POLL_MS,
     refetchIntervalInBackground: true,
+    // Only for admins whose permissions cover pricing orders
+    enabled,
   });
 
   useEffect(() => {

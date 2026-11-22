@@ -19,6 +19,7 @@ import { Switch } from '../components/ui/Switch';
 import { FormField, iosInputCls } from '../components/ui/FormField';
 import { getStoreOpenStatus, orderedDays, currentDayKey, formatHourRange, WEEKDAY_LABELS } from '../utils/storeHours';
 import type { ServiceCategory } from '../types';
+import { Can } from '../components/Can';
 
 const TIER_LABEL: Record<string, string> = {
   '2x': '🔥 2x Performer',
@@ -68,6 +69,7 @@ export const BranchDetail = () => {
                 <span className={`inline-flex px-2.5 py-0.5 text-xs font-semibold rounded-full backdrop-blur bg-white/90 ${branch.status === 'active' || !branch.status ? 'text-ios-green' : 'text-ios-secondary-label'}`}>
                   {branch.status || 'Active'}
                 </span>
+                <Can permission="branches.manage" branchId={branchId}>
                 <button
                   onClick={() => navigate(`/branches/${branchId}/edit`)}
                   className="p-1.5 rounded-full bg-white/90 text-ios-label hover:bg-white backdrop-blur"
@@ -75,6 +77,7 @@ export const BranchDetail = () => {
                 >
                   <Pencil className="w-3.5 h-3.5" />
                 </button>
+                </Can>
               </div>
 
               <div className="absolute inset-x-0 bottom-0 p-4 sm:p-5">
@@ -201,10 +204,12 @@ function BranchServices({ branchId }: { branchId: string }) {
           <p className="text-xs font-semibold text-ios-secondary-label uppercase tracking-wide">Products</p>
           <p className="text-xs text-ios-gray mt-0.5">The vendor adds products and sets prices in their app, under Products and prices.</p>
         </div>
+        <Can permission="catalog.manage">
         <div className="flex gap-2">
           <Button size="sm" variant="secondary" onClick={() => setCategoryModalOpen(true)}>+ Category</Button>
           <Button size="sm" variant="secondary" onClick={() => setSubCategoryModalOpen(true)}>+ Sub-Category</Button>
         </div>
+        </Can>
       </div>
 
       {isLoading ? (
@@ -230,6 +235,7 @@ function BranchServices({ branchId }: { branchId: string }) {
               <div className="shrink-0 text-xs text-ios-secondary-label">
                 {s.isActive ? 'On sale' : 'Not on sale'}
               </div>
+              <Can permission="catalog.manage">
               <div onClick={(e) => e.stopPropagation()} className="shrink-0">
                 <Switch checked={s.isActive} onChange={() => toggleActiveMutation.mutate({ id: s.id, isActive: !s.isActive })} />
               </div>
@@ -261,6 +267,7 @@ function BranchServices({ branchId }: { branchId: string }) {
                   </div>
                 )}
               </div>
+              </Can>
             </div>
           ))}
           {services.length === 0 && (

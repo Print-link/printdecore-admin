@@ -12,6 +12,7 @@ import { Button } from '../components/ui/Button';
 import { iosInputCls } from '../components/ui/FormField';
 import { getStoreOpenStatus } from '../utils/storeHours';
 import toast from 'react-hot-toast';
+import { Can } from '../components/Can';
 
 export const Branches = () => {
   const navigate = useNavigate();
@@ -50,7 +51,7 @@ export const Branches = () => {
       <div>
         <PageHeader
           title="Branches"
-          actions={<Button size="sm" onClick={() => navigate('/branches/new')}>Create Branch</Button>}
+          actions={<Can permission="branches.manage"><Button size="sm" onClick={() => navigate('/branches/new')}>Create Branch</Button></Can>}
         />
 
         <div className="mb-3">
@@ -95,6 +96,7 @@ export const Branches = () => {
                           </span>
                         )}
 
+                        <Can permission="branches.manage" branchId={branch.id}>
                         <div
                           className="absolute top-2 right-2 relative"
                           ref={(el) => { dropdownRefs.current[branch.id] = el; }}
@@ -115,6 +117,7 @@ export const Branches = () => {
                             </div>
                           )}
                         </div>
+                        </Can>
 
                         {open.isOpen !== null && (
                           <div className="absolute bottom-2 left-2 flex items-center gap-1.5 bg-black/50 backdrop-blur px-2 py-0.5 rounded-full">

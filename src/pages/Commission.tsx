@@ -10,6 +10,7 @@ import { Badge } from '../components/ui/Badge';
 import { Button } from '../components/ui/Button';
 import { FormField, iosInputCls } from '../components/ui/FormField';
 import { commissionService, withCommission, type BranchCommission } from '../services/commissionService';
+import { Can } from '../components/Can';
 
 const money = (n: number) => `GHS ${n.toLocaleString('en-GH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 const errorMessage = (e: unknown, fallback: string) =>
@@ -97,9 +98,11 @@ const PlatformRate = ({ rate, onSaved }: { rate: number; onSaved: () => void }) 
               aria-invalid={!valid}
             />
           </FormField>
+          <Can permission="finance.manage" fallback={<p className="text-xs text-ios-gray">You can view rates but not change them.</p>}>
           <Button type="submit" disabled={!changed || save.isPending}>
             {save.isPending ? 'Saving…' : 'Save'}
           </Button>
+          </Can>
         </form>
       </div>
       <p className="mt-4 text-xs text-ios-secondary-label bg-ios-gray6 rounded-ios px-3 py-2">
@@ -230,9 +233,11 @@ const ShopRow = ({
           {own ? <Badge variant="warning">Own rate</Badge> : <Badge variant="neutral">Platform</Badge>}
         </div>
         {!editing && (
+          <Can permission="finance.manage">
           <Button variant="ghost" size="sm" onClick={onEdit}>
             {own ? 'Change' : 'Set own rate'}
           </Button>
+          </Can>
         )}
       </div>
       {own && !editing && (branch.reason || branch.expiresAt) && (

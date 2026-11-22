@@ -16,6 +16,7 @@ import { formatDateTime } from '../utils/date';
 import { nextStatusesFor } from '../utils/orderStatusFlow';
 import { DeliveryLocationMap } from '../components/DeliveryLocationMap';
 import type { OrderStatus } from '../types';
+import { useAuth } from '../contexts/AuthContext';
 
 type BadgeVariant = 'success' | 'neutral' | 'warning' | 'danger';
 
@@ -53,9 +54,17 @@ export const OrderDetail = () => {
     queryFn: () => orderService.getById(orderId),
   });
 
+  // What this admin may do here, at this order's branch (the server checks the same)
+  const { can } = useAuth();
+  const orderBranch = order?.branchId ?? null;
+  const canManage = can('orders.manage', orderBranch);
+  const canAssign = can('orders.assign', orderBranch);
+  const canQuote = can('quotes.manage', orderBranch);
+
   const { data: branches } = useQuery({
     queryKey: ['branches', 'for-vendor-assignment'],
     queryFn: () => branchService.getAll({ limit: 500 }),
+    enabled: can('orders.assign'),
   });
 
   // Quote-on-request orders carry a quotation row from the moment they're
@@ -185,7 +194,7 @@ export const OrderDetail = () => {
 
             {printRequest && <PrintRequestSpec request={printRequest} />}
 
-            {quotation && (
+            {quotation && canQuote && (
               <QuoteComposer
                 quotation={quotation}
                 orderStatus={order.status}
@@ -193,10 +202,12 @@ export const OrderDetail = () => {
               />
             )}
 
-            {/* Ops actions — never visible to the customer */}
+            {/* Ops actions — never visible to the customer; each shown only to admins allowed to use it */}
+            {(canManage || canAssign) && (
             <div className="border border-ios-gray5 rounded-ios p-4 space-y-4 bg-ios-gray6">
               <p className="text-xs font-semibold text-ios-secondary-label uppercase tracking-wide">Operations</p>
 
+              {canManage && (
               <FormField label="Move to">
                 {(() => {
                   const next = showAllStatuses ? ALL_STATUSES : nextStatusesFor(order.status, order.fulfilmentType);
@@ -254,7 +265,9 @@ export const OrderDetail = () => {
                   );
                 })()}
               </FormField>
+              )}
 
+              {canAssign && (
               <FormField label="Assigned production partner">
                 <div className="flex gap-2">
                   <select
@@ -276,7 +289,9 @@ export const OrderDetail = () => {
                   </Button>
                 </div>
               </FormField>
+              )}
 
+              {canManage && (<>
               <FormField label="Internal notes (never shown to the customer)">
                 <textarea
                   value={notesDraft}
@@ -293,7 +308,9 @@ export const OrderDetail = () => {
               >
                 {updateNotesMutation.isPending ? 'Saving…' : 'Save note'}
               </Button>
+              </>)}
             </div>
+            )}
 
             {order.comment && !printRequest && (
               <div>

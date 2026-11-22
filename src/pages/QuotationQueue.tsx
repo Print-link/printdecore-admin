@@ -22,6 +22,7 @@ import { OrderItemsTable } from '../components/order/OrderItemsTable';
 import { PrintRequestSpec } from '../components/order/PrintRequestSpec';
 import { QuoteComposer } from '../components/order/QuoteComposer';
 import type { Order } from '../types';
+import { useAuth } from '../contexts/AuthContext';
 
 type BadgeVariant = 'success' | 'neutral' | 'warning' | 'danger';
 
@@ -42,6 +43,9 @@ const statusLabel: Record<Quotation['status'], string> = {
 const money = (n: number) => `GHS ${n.toLocaleString('en-GH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 
 const quoteTitle = (q: Quotation) => q.requestNumber || `#${q.orderId.slice(-8)}`;
+
+/** A quotation's branch, when the list row carries it */
+const liveBranchOf = (q: { branchId?: string | null } | null): string | null => q?.branchId ?? null;
 
 export const QuotationQueue = () => {
   const [statusFilter, setStatusFilter] = useState<Quotation['status'] | ''>('PENDING');
@@ -70,10 +74,15 @@ export const QuotationQueue = () => {
     enabled: !!reviewing?.printRequestId,
   });
 
+  const { can } = useAuth();
+  const reviewBranch = order?.branchId ?? liveBranchOf(reviewing);
+  const canQuote = can('quotes.manage', reviewBranch);
+  const canReassign = can('orders.assign', reviewBranch);
+
   const { data: branches } = useQuery({
     queryKey: ['branches', 'for-reassignment'],
     queryFn: () => branchService.getAll({ limit: 500 }),
-    enabled: !!reviewing,
+    enabled: !!reviewing && canReassign,
   });
 
   const reassignMutation = useMutation({
@@ -203,7 +212,7 @@ export const QuotationQueue = () => {
               )}
 
               {/* The primary action */}
-              <QuoteComposer
+              {canQuote && <QuoteComposer
                 quotation={liveReviewing}
                 orderStatus={order?.status ?? liveReviewing.orderStatus}
                 referencePrice={liveReviewing.referencePrice ?? printRequest?.calculatedPrice}
@@ -211,10 +220,10 @@ export const QuotationQueue = () => {
                   // A freshly sent quote drops out of the "Needs a price" filter — close so ops isn't left staring at a row that's gone.
                   if (statusFilter === 'PENDING') setReviewing(null);
                 }}
-              />
+              />}
 
               {/* Secondary: vendor change + jump to the order */}
-              {order && (
+              {order && canReassign && (
                 <div className="border border-ios-gray5 rounded-ios p-4 space-y-2 bg-ios-gray6">
                   <FormField label="Reassign production partner">
                     <div className="flex gap-2">

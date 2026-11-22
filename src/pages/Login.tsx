@@ -6,6 +6,7 @@ import { LoadingSpinner } from '../components/LoadingSpinner';
 import { FormField, iosInputCls } from '../components/ui/FormField';
 import { Button } from '../components/ui/Button';
 import logoArt from '../assets/images/LogoArt.png';
+import { firstAllowedPath } from '../auth/permissions';
 
 export const Login = () => {
   const [email, setEmail] = useState('');
@@ -20,8 +21,8 @@ export const Login = () => {
     setLoginError(null);
     setIsLoading(true);
     try {
-      await login(email, password);
-      navigate('/dashboard');
+      const grants = await login(email, password);
+      navigate(firstAllowedPath(grants));
     } catch (error: any) {
       setLoginError(error.response?.data?.message || 'Login failed. Please check your email and password.');
     } finally {
