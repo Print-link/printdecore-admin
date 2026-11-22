@@ -1,9 +1,10 @@
 import api from '../config/api';
 import type { SuperAdmin } from '../types';
+import type { AdminGrants } from '../auth/permissions';
 
 export const superAdminAuth = {
   login: async (email: string, password: string) => {
-    const response = await api.post<{ success: boolean; data: { superAdmin: SuperAdmin; token: string } }>(
+    const response = await api.post<{ success: boolean; data: { superAdmin: SuperAdmin; token: string } & Partial<AdminGrants> }>(
       '/superadmin/login',
       { email, password }
     );

@@ -33,6 +33,10 @@ api.interceptors.response.use(
       localStorage.removeItem("superAdmin");
       window.location.href = "/login";
     }
+    if (error.response?.status === 403 && error.response?.data?.code === "PERMISSION_DENIED") {
+      // The server is the judge: if it refused, our cached permissions are out of date
+      window.dispatchEvent(new Event("admin-permissions-stale"));
+    }
     return Promise.reject(error);
   },
 );

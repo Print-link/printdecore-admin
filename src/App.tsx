@@ -2,7 +2,9 @@ import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "react-hot-toast";
 import { AuthProvider } from "./contexts/AuthContext";
-import { ProtectedRoute } from "./layout/ProtectedRoute";
+import { NoAccess, ProtectedRoute } from "./layout/ProtectedRoute";
+import { useAuth } from "./contexts/AuthContext";
+import { firstAllowedPath } from "./auth/permissions";
 import { Login } from "./pages/Login";
 import { Dashboard } from "./pages/Dashboard";
 import { Managers } from "./pages/Managers";
@@ -69,6 +71,13 @@ const protectedRoutes = [
   { path: "/printer-sales/listings", element: <PrinterListings /> },
 ];
 
+/** Send each admin to the first page they're allowed to open */
+const HomeRedirect = () => {
+  const { grants, isAuthenticated, isLoading } = useAuth();
+  if (isLoading) return null;
+  return <Navigate to={isAuthenticated ? firstAllowedPath(grants) : "/login"} replace />;
+};
+
 function App() {
   return (
     <QueryClientProvider client={queryClient}>
@@ -83,8 +92,9 @@ function App() {
                 element={<ProtectedRoute>{element}</ProtectedRoute>}
               />
             ))}
-            <Route path="/" element={<Navigate to="/dashboard" replace />} />
-            <Route path="*" element={<Navigate to="/dashboard" replace />} />
+            <Route path="/no-access" element={<ProtectedRoute><NoAccess /></ProtectedRoute>} />
+            <Route path="/" element={<HomeRedirect />} />
+            <Route path="*" element={<HomeRedirect />} />
           </Routes>
           <Toaster
             position="top-right"

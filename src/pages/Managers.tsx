@@ -13,6 +13,7 @@ import { Button } from '../components/ui/Button';
 import { FormField, iosInputCls } from '../components/ui/FormField';
 import toast from 'react-hot-toast';
 import type { Manager } from '../types';
+import { Can } from '../components/Can';
 
 export const Managers = () => {
   const [page, setPage] = useState(1);
@@ -144,7 +145,7 @@ export const Managers = () => {
       <div>
         <PageHeader
           title="Managers"
-          actions={<Button size="sm" onClick={() => setIsCreateModalOpen(true)}>Register Manager</Button>}
+          actions={<Can permission="vendors.manage"><Button size="sm" onClick={() => setIsCreateModalOpen(true)}>Register Manager</Button></Can>}
         />
 
         <div className="mb-3">
@@ -177,6 +178,7 @@ export const Managers = () => {
                   trailing={
                     <>
                       <Badge variant="neutral">{manager.role}</Badge>
+                      <Can permission="vendors.manage">
                       <div className="relative" ref={(el) => { dropdownRefs.current[manager.id] = el; }}>
                         <button
                           onClick={() => setOpenDropdownId(openDropdownId === manager.id ? null : manager.id)}
@@ -193,6 +195,7 @@ export const Managers = () => {
                           </div>
                         )}
                       </div>
+                      </Can>
                     </>
                   }
                 />

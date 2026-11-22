@@ -27,6 +27,8 @@ import {
   ChevronDown,
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
+import { PAGE_PERMISSIONS } from '../auth/permissions';
+import { NotificationsToggle } from './NotificationsToggle';
 import { printerOrderService } from '../services/superAdminService';
 import logoArt from '../assets/images/LogoArt.png';
 import { useNewOrderAlerts } from '../hooks/useNewOrderAlerts';
@@ -123,7 +125,12 @@ const groupForPath = (pathname: string) =>
 export const Layout = ({ children }: LayoutProps) => {
   const location = useLocation();
   const navigate = useNavigate();
-  const { logout } = useAuth();
+  const { logout, can, superAdmin } = useAuth();
+  const canOpen = (path: string) => !PAGE_PERMISSIONS[path] || can(PAGE_PERMISSIONS[path]);
+  const visibleTop = topLevel.filter((item) => canOpen(item.path));
+  const visibleGroups = groups
+    .map((g) => ({ ...g, items: g.items.filter((item) => canOpen(item.path)) }))
+    .filter((g) => g.items.length > 0);
 
   // Powers the "new order" badge on the Printer Sales tab — kept fresh without
   // requiring ops to open the page to notice a new order came in.
@@ -131,9 +138,10 @@ export const Layout = ({ children }: LayoutProps) => {
     queryKey: ['printer-orders', 'badge', 'PROCESSING'],
     queryFn: () => printerOrderService.getAll({ status: 'PROCESSING', limit: 1 }),
     refetchInterval: 30000,
+    enabled: can('marketplace.manage'),
   });
   const newPrinterOrderCount = printerOrdersData?.total ?? 0;
-  const ordersNeedingPrice = useNewOrderAlerts();
+  const ordersNeedingPrice = useNewOrderAlerts(can(['quotes.manage', 'custom_requests.manage']));
 
   const badgeFor = (path: string) =>
     path === '/printer-sales' ? newPrinterOrderCount : path === '/quotations' ? ordersNeedingPrice : 0;
@@ -211,9 +219,9 @@ export const Layout = ({ children }: LayoutProps) => {
           </div>
 
           <nav className="flex-1 overflow-y-auto space-y-6 pr-1">
-            <div className="space-y-1">{topLevel.map((item) => renderLink(item))}</div>
+            <div className="space-y-1">{visibleTop.map((item) => renderLink(item))}</div>
 
-            {groups.map((group) => {
+            {visibleGroups.map((group) => {
               const isOpen = openGroups.has(group.id);
               const containsActive = group.items.some((item) => item.path === location.pathname);
               const hiddenBadge = isOpen
@@ -248,7 +256,9 @@ export const Layout = ({ children }: LayoutProps) => {
             })}
           </nav>
 
-          <div className="pt-3">
+          <div className="pt-3 space-y-1">
+            {superAdmin && <p className="px-3 pb-1 text-xs text-ios-secondary-label truncate" title={superAdmin.email}>{superAdmin.name}</p>}
+            <NotificationsToggle />
             <button
               onClick={handleLogout}
               className="flex items-center gap-2.5 w-full px-3 py-2 rounded-xl text-sm font-medium text-ios-secondary-label hover:bg-black/5 transition-colors"
