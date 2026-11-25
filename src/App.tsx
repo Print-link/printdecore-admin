@@ -30,6 +30,7 @@ import { Roles } from "./pages/Roles";
 import BlogPosts from "./pages/BlogPosts";
 import { Waitlist } from "./pages/Waitlist";
 import { Discounts } from "./pages/Discounts";
+import { PromoBanners } from "./pages/PromoBanners";
 import { PrinterSales } from "./pages/PrinterSales";
 import { PrinterListings } from "./pages/PrinterListings";
 
@@ -67,6 +68,7 @@ const protectedRoutes = [
   { path: "/blog", element: <BlogPosts /> },
   { path: "/waitlist", element: <Waitlist /> },
   { path: "/discounts", element: <Discounts /> },
+  { path: "/promo-banners", element: <PromoBanners /> },
   { path: "/printer-sales", element: <PrinterSales /> },
   { path: "/printer-sales/listings", element: <PrinterListings /> },
 ];
