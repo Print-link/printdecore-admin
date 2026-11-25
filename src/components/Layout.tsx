@@ -23,6 +23,7 @@ import {
   Tags,
   ArrowRightLeft,
   Printer,
+  GalleryHorizontal,
   LogOut,
   ChevronDown,
 } from 'lucide-react';
@@ -91,6 +92,7 @@ const groups: NavGroup[] = [
       { name: 'WhatsApp', path: '/whatsapp', icon: MessageCircle },
       { name: 'Support Tickets', path: '/support', icon: LifeBuoy },
       { name: 'Blog Posts', path: '/blog', icon: Newspaper },
+      { name: 'Promo Banners', path: '/promo-banners', icon: GalleryHorizontal },
       { name: 'Waitlist', path: '/waitlist', icon: ListPlus },
     ],
   },

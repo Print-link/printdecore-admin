@@ -68,6 +68,7 @@ export const PAGE_PERMISSIONS: Record<string, PermissionNeed> = {
   '/whatsapp': 'messaging.manage',
   '/support': 'support.manage',
   '/blog': 'content.manage',
+  '/promo-banners': 'content.manage',
   '/waitlist': 'content.manage',
   '/commission': 'finance.view',
   '/billing': 'finance.view',
