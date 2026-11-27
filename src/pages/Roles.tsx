@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { Lock, Pencil, Plus, Trash2, X } from 'lucide-react';
+import { Lock, Mail, Pencil, Plus, RotateCw, Trash2, X } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { Layout } from '../components/Layout';
 import { LoadingSpinner } from '../components/LoadingSpinner';
@@ -13,6 +13,7 @@ import { FormField, iosInputCls } from '../components/ui/FormField';
 import {
   adminAccessService,
   type AdminAccount,
+  type AdminInvitation,
   type AdminPermissionInfo,
   type AdminRole,
   type AdminRoleAssignment,
@@ -108,8 +109,9 @@ const AdminsTab = ({ roles, branches }: { roles: AdminRole[]; branches: BranchOp
   return (
     <>
       <div className="flex justify-end mb-3">
-        <Button size="sm" onClick={() => setCreating(true)}><Plus className="w-4 h-4" />Add admin</Button>
+        <Button size="sm" onClick={() => setCreating(true)}><Plus className="w-4 h-4" />Invite admin</Button>
       </div>
+      <PendingInvitations />
       <Card className="divide-y divide-ios-gray5">
         {admins.map((a) => (
           <div key={a.id} className="flex flex-col sm:flex-row sm:items-center gap-3 p-4">
@@ -163,7 +165,14 @@ const AdminsTab = ({ roles, branches }: { roles: AdminRole[]; branches: BranchOp
           }}
         />
       )}
-      {creating && <CreateAdminModal roles={roles} branches={branches} onClose={() => setCreating(false)} onSaved={() => { invalidate(); setCreating(false); }} />}
+      {creating && (
+        <InviteAdminModal
+          roles={roles}
+          branches={branches}
+          onClose={() => setCreating(false)}
+          onSaved={() => { queryClient.invalidateQueries({ queryKey: ['admin-invitations'] }); setCreating(false); }}
+        />
+      )}
     </>
   );
 };
@@ -250,39 +259,121 @@ const AssignRolesModal = ({
   );
 };
 
-const CreateAdminModal = ({
+const sentToast = (r: { email: string; emailSent: boolean }, verb: string) => {
+  if (r.emailSent) toast.success(`${verb} ${r.email}`);
+  else toast.error(`The invite was saved but the email to ${r.email} didn't go out. Try Resend in a minute.`);
+};
+
+/** The inviter gives an email and roles; the invitee chooses their own name and password from the email */
+const InviteAdminModal = ({
   roles, branches, onClose, onSaved,
 }: { roles: AdminRole[]; branches: BranchOption[]; onClose: () => void; onSaved: () => void }) => {
   const [assignments, setAssignments] = useState<AdminRoleAssignment[]>([]);
-  const create = useMutation({
-    mutationFn: (data: { name: string; email: string; password: string }) => adminAccessService.createAdmin({ ...data, roles: assignments }),
-    onSuccess: () => { toast.success('Admin added. Share the temporary password with them privately.'); onSaved(); },
-    onError: (e) => toast.error(errorMessage(e, "Couldn't add the admin")),
+  const invite = useMutation({
+    mutationFn: (email: string) => adminAccessService.invite(email, assignments),
+    onSuccess: (r) => { sentToast(r, 'Invitation sent to'); onSaved(); },
+    onError: (e) => toast.error(errorMessage(e, "Couldn't send the invitation")),
   });
   return (
-    <Modal isOpen onClose={onClose} title="Add admin" size="large">
+    <Modal isOpen onClose={onClose} title="Invite admin" size="large">
       <form
         className="space-y-4"
         onSubmit={(e) => {
           e.preventDefault();
-          const fd = new FormData(e.currentTarget);
-          create.mutate({ name: String(fd.get('name')), email: String(fd.get('email')), password: String(fd.get('password')) });
+          invite.mutate(String(new FormData(e.currentTarget).get('email')).trim());
         }}
       >
-        <FormField label="Name"><input name="name" required className={iosInputCls} /></FormField>
-        <FormField label="Email"><input name="email" type="email" required className={iosInputCls} /></FormField>
-        <FormField label="Temporary password (at least 10 characters)">
-          <input name="password" type="password" minLength={10} required autoComplete="new-password" className={iosInputCls} />
+        <FormField label="Email">
+          <input name="email" type="email" required autoFocus autoComplete="off" className={iosInputCls} placeholder="name@example.com" />
         </FormField>
         <FormField label="Roles">
           <AssignmentEditor value={assignments} onChange={setAssignments} roles={roles} branches={branches} />
         </FormField>
+        <p className="text-xs text-ios-secondary-label">
+          We'll email them a link to choose their own name and password. The link works once and expires in 7 days.
+        </p>
         <div className="flex justify-end gap-3 pt-2">
           <Button type="button" variant="secondary" onClick={onClose}>Cancel</Button>
-          <Button type="submit" disabled={create.isPending}>{create.isPending ? 'Adding…' : 'Add admin'}</Button>
+          <Button type="submit" disabled={invite.isPending}>{invite.isPending ? 'Sending…' : 'Send invitation'}</Button>
         </div>
       </form>
     </Modal>
+  );
+};
+
+const shortDate = (iso: string) => new Date(iso).toLocaleDateString(undefined, { day: 'numeric', month: 'short' });
+
+/** Invitations nobody has accepted yet, with resend and revoke */
+const PendingInvitations = () => {
+  const queryClient = useQueryClient();
+  const { data: invites = [] } = useQuery({ queryKey: ['admin-invitations'], queryFn: adminAccessService.invitations });
+  const refresh = () => queryClient.invalidateQueries({ queryKey: ['admin-invitations'] });
+
+  const resend = useMutation({
+    mutationFn: (id: string) => adminAccessService.resendInvitation(id),
+    onSuccess: (r) => { refresh(); sentToast(r, 'Sent a new link to'); },
+    onError: (e) => toast.error(errorMessage(e, "Couldn't resend the invitation")),
+  });
+  const revoke = useMutation({
+    mutationFn: (id: string) => adminAccessService.revokeInvitation(id),
+    onSuccess: () => { refresh(); toast.success('Invitation revoked'); },
+    onError: (e) => toast.error(errorMessage(e, "Couldn't revoke the invitation")),
+  });
+
+  if (!invites.length) return null;
+
+  return (
+    <div className="mb-5">
+      <h3 className="text-xs font-semibold uppercase tracking-wide text-ios-secondary-label mb-2 px-1">Pending invitations</h3>
+      <Card className="divide-y divide-ios-gray5">
+        {invites.map((inv: AdminInvitation) => (
+          <div key={inv.id} className="flex flex-col sm:flex-row sm:items-center gap-3 p-4">
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center gap-2">
+                <Mail className="w-4 h-4 text-ios-gray shrink-0" />
+                <p className="font-medium text-ios-label truncate">{inv.email}</p>
+                {inv.expired ? <Badge variant="danger">Expired</Badge> : <Badge variant="warning">Invited</Badge>}
+              </div>
+              <p className="text-xs text-ios-secondary-label mt-0.5">
+                {inv.invitedByName ? `Invited by ${inv.invitedByName} · ` : ''}
+                {inv.sentCount > 1 ? `sent ${inv.sentCount} times, last ${shortDate(inv.lastSentAt)}` : `sent ${shortDate(inv.lastSentAt)}`}
+                {' · '}
+                {inv.expired ? 'link expired' : `expires ${shortDate(inv.expiresAt)}`}
+              </p>
+              {inv.roles.length > 0 && (
+                <div className="flex flex-wrap gap-1 mt-2">
+                  {inv.roles.map((r) => (
+                    <Badge key={`${r.roleId}:${r.branchId}`} variant={r.branchId ? 'warning' : 'neutral'}>
+                      {r.roleName}{r.branchId ? ` · ${r.branchName ?? 'one branch'}` : ''}
+                    </Badge>
+                  ))}
+                </div>
+              )}
+            </div>
+            <div className="flex gap-2 shrink-0">
+              <Button
+                size="sm"
+                variant="secondary"
+                disabled={resend.isPending && resend.variables === inv.id}
+                onClick={() => resend.mutate(inv.id)}
+              >
+                <RotateCw className="w-3.5 h-3.5" />Resend
+              </Button>
+              <Button
+                size="sm"
+                variant="ghost"
+                disabled={revoke.isPending && revoke.variables === inv.id}
+                onClick={() => {
+                  if (window.confirm(`Revoke the invitation for ${inv.email}? The link in their email will stop working.`)) revoke.mutate(inv.id);
+                }}
+              >
+                Revoke
+              </Button>
+            </div>
+          </div>
+        ))}
+      </Card>
+    </div>
   );
 };
 

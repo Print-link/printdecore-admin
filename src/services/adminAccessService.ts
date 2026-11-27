@@ -36,6 +36,34 @@ export interface AdminAccount {
   roles: AdminRoleAssignment[];
 }
 
+export interface AdminInvitation {
+  id: string;
+  email: string;
+  roles: AdminRoleAssignment[];
+  expiresAt: string;
+  createdAt: string;
+  lastSentAt: string;
+  sentCount: number;
+  /** Past its expiry: the link no longer works until it's resent */
+  expired: boolean;
+  invitedByName: string | null;
+}
+
+export interface InviteSendResult {
+  id: string;
+  email: string;
+  /** false when the mail service refused it; the invite still exists and can be resent */
+  emailSent: boolean;
+}
+
+/** What an invited person sees on the accept page */
+export interface InvitationPreview {
+  email: string;
+  invitedByName: string | null;
+  roles: string[];
+  expiresAt: string;
+}
+
 export interface AdminAuditEntry {
   id: string;
   action: string;
@@ -62,8 +90,21 @@ export const adminAccessService = {
   deleteRole: async (id: string) => (await api.delete(`/admin-access/roles/${id}`)).data,
 
   admins: async () => (await api.get<Ok<AdminAccount[]>>('/admin-access/admins')).data.data,
-  createAdmin: async (data: { name: string; email: string; password: string; roles: AdminRoleAssignment[] }) =>
-    (await api.post<Ok<{ id: string }>>('/admin-access/admins', data)).data.data,
+  invitations: async () => (await api.get<Ok<AdminInvitation[]>>('/admin-access/invitations')).data.data,
+  invite: async (email: string, roles: AdminRoleAssignment[]) =>
+    (await api.post<Ok<InviteSendResult>>('/admin-access/invitations', {
+      email,
+      roles: roles.map(({ roleId, branchId }) => ({ roleId, branchId })),
+    })).data.data,
+  resendInvitation: async (id: string) => (await api.post<Ok<InviteSendResult>>(`/admin-access/invitations/${id}/resend`)).data.data,
+  revokeInvitation: async (id: string) => (await api.delete(`/admin-access/invitations/${id}`)).data,
+
+  /** Public: the invitee checks their link (no sign-in) */
+  lookupInvitation: async (token: string) =>
+    (await api.post<Ok<InvitationPreview>>('/admin-invitations/lookup', { token })).data.data,
+  /** Public: the invitee sets their own name and password */
+  acceptInvitation: async (token: string, name: string, password: string) =>
+    (await api.post<Ok<{ email: string }>>('/admin-invitations/accept', { token, name, password })).data.data,
   updateAdmin: async (id: string, data: { name?: string; isActive?: boolean }) => (await api.put(`/admin-access/admins/${id}`, data)).data,
   setAdminRoles: async (id: string, roles: AdminRoleAssignment[]) =>
     (await api.put(`/admin-access/admins/${id}/roles`, { roles: roles.map(({ roleId, branchId }) => ({ roleId, branchId })) })).data,

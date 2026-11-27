@@ -6,6 +6,7 @@ import { NoAccess, ProtectedRoute } from "./layout/ProtectedRoute";
 import { useAuth } from "./contexts/AuthContext";
 import { firstAllowedPath } from "./auth/permissions";
 import { Login } from "./pages/Login";
+import { AcceptInvite } from "./pages/AcceptInvite";
 import { Dashboard } from "./pages/Dashboard";
 import { Managers } from "./pages/Managers";
 import { Branches } from "./pages/Branches";
@@ -87,6 +88,7 @@ function App() {
         <BrowserRouter>
           <Routes>
             <Route path="/login" element={<Login />} />
+            <Route path="/accept-invite" element={<AcceptInvite />} />
             {protectedRoutes.map(({ path, element }) => (
               <Route
                 key={path}
